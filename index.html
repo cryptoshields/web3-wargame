@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>WarGame Level 1 - Approve Challenge</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 2rem; }
+    button { padding: 1rem 2rem; margin-top: 1rem; font-size: 1.1rem; background: #26a69a; border: none; color: #fff; cursor: pointer; }
+    .danger { background: #e74c3c; }
+    #status { margin-top: 2rem; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>⚔️ WarGame Level 1: Approve or Be Drained</h1>
+  <p>You're about to claim your fake reward. Will you survive?</p>
+  <button id="connectBtn">Connect Wallet</button>
+  <button id="approveBtn">Claim Reward</button>
+  <div id="status"></div>
+
+  <script type="text/javascript">
+    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7";
+    const spenderAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7"; // UnsafeApprover
+
+    const ABI = [
+      "function approve(address spender, uint256 amount) public returns (bool)"
+    ];
+
+    let provider, signer, token;
+
+    document.getElementById("connectBtn").onclick = async () => {
+      if (window.ethereum) {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner();
+        token = new ethers.Contract(tokenAddress, ABI, signer);
+        document.getElementById("status").innerText = "✅ Wallet connected! Ready to claim reward.";
+      } else {
+        alert("Please install MetaMask to use this site.");
+      }
+    };
+
+    document.getElementById("approveBtn").onclick = async () => {
+      if (!signer) return alert("Connect your wallet first.");
+      try {
+        const tx = await token.approve(spenderAddress, ethers.parseUnits("1000", 18));
+        await tx.wait();
+        document.getElementById("status").innerText = "⚠️ You approved a malicious contract! You've been drained (simulated).";
+        document.getElementById("approveBtn").disabled = true;
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Transaction failed or rejected.";
+      }
+    };
+  </script>
+</body>
+</html>
