@@ -53,15 +53,38 @@
       font-weight: bold;
     }
 
-    @media (max-width: 600px) {
-      .container {
-        margin: 2vh 1rem;
-      }
+    .manual-steps {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    .note {
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-top: 0.5rem;
+    }
+
+    #mobile-warning {
+      display: none;
+      padding: 2rem;
+      font-size: 1.2rem;
+      text-align: center;
+      background: #111;
+      height: 100vh;
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div id="mobile-warning">
+    🚫 This simulation is not supported on mobile.<br><br>
+    Please access it from a desktop or laptop using MetaMask for full functionality.
+  </div>
+
+  <div class="container" id="main-content">
     <h1>🧠 Web3 War Game</h1>
     <p>
       Welcome to the most dangerous simulation in Web3. Your job? Survive.
@@ -77,7 +100,17 @@
 
     <h3>🛠 MetaMask Setup</h3>
     <button onclick="switchToSepolia()">🔁 Switch to Sepolia Network</button>
-    <button onclick="addSepolia()">🌐 Add Sepolia Network Manually</button>
+    <div class="note">🦊 This works best in Chrome/Brave MetaMask. Firefox may block popups.</div>
+
+    <h4 style="margin-top: 2rem;">🌐 Add Sepolia Network Manually (if needed)</h4>
+    <div class="manual-steps">
+      <strong>Network Name:</strong> Sepolia Testnet<br />
+      <strong>New RPC URL:</strong> https://rpc.sepolia.org<br />
+      <strong>Chain ID:</strong> 11155111<br />
+      <strong>Currency Symbol:</strong> ETH<br />
+      <strong>Block Explorer URL:</strong> https://sepolia.etherscan.io
+    </div>
+
     <button onclick="window.open('https://sepoliafaucet.com/', '_blank')">⛽️ Get Sepolia ETH</button>
 
     <h3>🎮 Begin Simulation</h3>
@@ -94,43 +127,28 @@
       try {
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xaa36a7' }], // Sepolia
+          params: [{ chainId: '0xaa36a7' }],
         });
       } catch (switchError) {
-        // If Sepolia isn't added yet
         if (switchError.code === 4902) {
-          addSepolia();
+          alert("Sepolia network not found. Please add it manually using the info above.");
         } else {
           alert("Error switching network: " + switchError.message);
         }
       }
     }
 
-    async function addSepolia() {
-      if (typeof window.ethereum === 'undefined') {
-        alert("MetaMask is not detected.");
-        return;
-      }
-
-      try {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: '0xaa36a7',
-            chainName: 'Sepolia Test Network',
-            rpcUrls: ['https://rpc.sepolia.org'],
-            nativeCurrency: {
-              name: 'Sepolia ETH',
-              symbol: 'ETH',
-              decimals: 18,
-            },
-            blockExplorerUrls: ['https://sepolia.etherscan.io'],
-          }],
-        });
-      } catch (error) {
-        alert("Failed to add Sepolia: " + error.message);
-      }
+    // Mobile detection
+    function isMobile() {
+      return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     }
+
+    window.onload = () => {
+      if (isMobile()) {
+        document.getElementById("main-content").style.display = "none";
+        document.getElementById("mobile-warning").style.display = "block";
+      }
+    };
   </script>
 </body>
 </html>
