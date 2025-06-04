@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>WarGame Level 1 - Approve Challenge</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 2rem; }
     button { padding: 1rem 2rem; margin-top: 1rem; font-size: 1.1rem; background: #26a69a; border: none; color: #fff; cursor: pointer; }
@@ -19,8 +19,8 @@
   <div id="status"></div>
 
   <script type="text/javascript">
-    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7";
-    const spenderAddress = "0xE717C074edf0eacf9f318043553726411864C731";
+    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7"; // WGFAKE Token
+    const spenderAddress = "0xE717C074edf0eacf9f318043553726411864C731"; // w3game contract
 
     const ABI = [
       "function approve(address spender, uint256 amount) public returns (bool)"
@@ -30,15 +30,12 @@
 
     document.getElementById("connectBtn").onclick = async () => {
       try {
-        if (window.ethereum) {
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-          signer = provider.getSigner();
-          token = new ethers.Contract(tokenAddress, ABI, signer);
-          document.getElementById("status").innerText = "✅ Wallet connected! Ready to claim reward.";
-        } else {
-          alert("Please install MetaMask to use this site.");
-        }
+        if (!window.ethereum) throw new Error("MetaMask not installed");
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner();
+        token = new ethers.Contract(tokenAddress, ABI, signer);
+        document.getElementById("status").innerText = "✅ Wallet connected! Ready to claim reward.";
       } catch (err) {
         console.error(err);
         document.getElementById("status").innerText = "❌ Failed to connect wallet.";
@@ -48,7 +45,7 @@
     document.getElementById("approveBtn").onclick = async () => {
       if (!signer) return alert("Connect your wallet first.");
       try {
-        const tx = await token.approve(spenderAddress, ethers.utils.parseUnits("1000", 18));
+        const tx = await token.approve(spenderAddress, ethers.parseUnits("1000", 18));
         await tx.wait();
         document.getElementById("status").innerText = "⚠️ You approved a malicious contract! You've been drained (simulated).";
         document.getElementById("approveBtn").disabled = true;
