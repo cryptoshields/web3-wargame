@@ -1,130 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Web3 War Game - Intro</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Web3 War Game Intro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: url('ef43a353-b778-4a25-9c18-3e8f8b88d39f.png') center/cover no-repeat;
-      color: #fff;
+      color: white;
+      background: url('ef43a353-b778-4a25-9c18-3e8f8b88d39f.png') center center / cover no-repeat fixed;
+      backdrop-filter: brightness(0.6);
     }
 
-    .overlay {
-      background: rgba(0, 0, 0, 0.8);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
+    .container {
+      background-color: rgba(0, 0, 0, 0.7);
+      max-width: 800px;
+      margin: 5vh auto;
       padding: 2rem;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 0 20px #ff9800;
     }
 
     h1 {
-      font-size: 2.5rem;
       color: #ff9800;
+      margin-bottom: 1rem;
     }
 
     p {
-      font-size: 1.1rem;
-      max-width: 700px;
-      margin: 1rem auto;
+      line-height: 1.6;
+      font-size: 1rem;
     }
 
     button {
-      padding: 1rem 2rem;
-      margin: 1rem;
-      font-size: 1rem;
+      padding: 0.8rem 1.5rem;
+      margin: 1rem 0.5rem;
       background: #ff9800;
       color: white;
       border: none;
       border-radius: 8px;
       cursor: pointer;
+      font-size: 1rem;
     }
 
-    code {
-      background: #333;
-      padding: 0.2rem 0.4rem;
-      border-radius: 4px;
+    .warning {
+      background: rgba(255, 0, 0, 0.8);
       color: #fff;
-    }
-
-    .box {
-      background: rgba(255, 255, 255, 0.08);
       padding: 1rem;
       border-radius: 10px;
-      margin-top: 2rem;
-      max-width: 800px;
+      margin: 1.5rem 0;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        margin: 2vh 1rem;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="overlay">
-    <h1>Welcome to Web3 War Game ⚔️</h1>
+  <div class="container">
+    <h1>🧠 Web3 War Game</h1>
     <p>
-      This simulation will test your ability to spot malicious Web3 behaviors. <br>
-      Use a <strong>MetaMask wallet on the Sepolia Testnet</strong> to continue. <br>
-      <strong>Never use your real wallet. This is for education only.</strong>
+      Welcome to the most dangerous simulation in Web3. Your job? Survive.
+    </p>
+    <p>
+      This game will throw real Web3 attack vectors at you — unsafe approvals, fake airdrops, malicious contracts and more. Every interaction is a trap or a lesson.
     </p>
 
-    <button onclick="switchToSepolia()">🛰️ Switch to Sepolia</button>
-
-    <div class="box">
-      <h2>Add Sepolia Network Manually</h2>
-      <p>Open MetaMask → Networks → Add Network</p>
-      <p><strong>Fill in the following:</strong></p>
-      <p>
-        <code>Network Name:</code> Sepolia Testnet<br />
-        <code>New RPC URL:</code> https://rpc.sepolia.org<br />
-        <code>Chain ID:</code> 11155111<br />
-        <code>Currency Symbol:</code> ETH<br />
-        <code>Block Explorer URL:</code> https://sepolia.etherscan.io
-      </p>
+    <div class="warning">
+      🚨 Do NOT use your real wallet. <br>
+      Always use a test wallet with Sepolia ETH.
     </div>
 
-    <a href="level1.html"><button>🚀 Start Simulation</button></a>
+    <h3>🛠 MetaMask Setup</h3>
+    <button onclick="switchToSepolia()">🔁 Switch to Sepolia Network</button>
+    <button onclick="addSepolia()">🌐 Add Sepolia Network Manually</button>
+    <button onclick="window.open('https://sepoliafaucet.com/', '_blank')">⛽️ Get Sepolia ETH</button>
+
+    <h3>🎮 Begin Simulation</h3>
+    <button onclick="window.location.href='level1.html'">▶️ Start Level 1</button>
   </div>
 
   <script>
     async function switchToSepolia() {
       if (!window.ethereum) {
-        alert("Please install MetaMask.");
+        alert("MetaMask is required to use this feature.");
         return;
       }
-
       try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: "0xaa36a7" }]
+        await ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }]
         });
       } catch (switchError) {
         if (switchError.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: "wallet_addEthereumChain",
-              params: [
-                {
-                  chainId: "0xaa36a7",
-                  chainName: "Sepolia Testnet",
-                  rpcUrls: ["https://rpc.sepolia.org"],
-                  nativeCurrency: {
-                    name: "Sepolia ETH",
-                    symbol: "ETH",
-                    decimals: 18
-                  },
-                  blockExplorerUrls: ["https://sepolia.etherscan.io"]
-                }
-              ]
-            });
-          } catch (addError) {
-            console.error("Add Sepolia failed:", addError);
-          }
+          addSepolia(); // fallback if not added yet
         } else {
-          console.error("Switch to Sepolia failed:", switchError);
+          console.error("Switch error:", switchError);
+          alert("Failed to switch to Sepolia.");
         }
+      }
+    }
+
+    async function addSepolia() {
+      if (!window.ethereum) return;
+      try {
+        await ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0xaa36a7',
+            chainName: 'Sepolia Test Network',
+            rpcUrls: ['https://rpc.sepolia.org'],
+            nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
+            blockExplorerUrls: ['https://sepolia.etherscan.io']
+          }]
+        });
+      } catch (err) {
+        console.error("Add Sepolia error:", err);
       }
     }
   </script>
