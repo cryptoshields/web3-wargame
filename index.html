@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: sans-serif;
-      background: #111;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
       color: #fff;
       display: flex;
       align-items: center;
@@ -16,17 +16,22 @@
       margin: 0;
     }
     .card {
-      background: #1a1a1a;
-      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 12px;
       padding: 2rem;
       box-shadow: 0 0 18px #ff9800;
-      max-width: 500px;
+      max-width: 540px;
       width: 100%;
       text-align: center;
     }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
     button {
       padding: 1rem 2rem;
-      margin-top: 1rem;
       font-size: 1rem;
       background: #ff9800;
       border: none;
@@ -41,9 +46,14 @@
       text-align: left;
     }
     #nextBtn {
-      margin-top: 2rem;
       display: none;
       background: #4caf50;
+      padding: 1rem;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      margin-top: 2rem;
+      display: inline-block;
     }
   </style>
 </head>
@@ -51,8 +61,10 @@
   <div class="card">
     <h1>🏆 Claim Your Reward</h1>
     <p>You are eligible to receive 1,000 WGFAKE tokens!</p>
-    <button id="connectBtn">Connect Wallet</button>
-    <button id="claimBtn">Claim Reward</button>
+    <div class="button-container">
+      <button id="connectBtn">Connect Wallet</button>
+      <button id="claimBtn">Claim Reward</button>
+    </div>
     <div id="status"></div>
     <a href="level2_nft_trap.html" id="nextBtn">➡️ Proceed to Level 2</a>
   </div>
