@@ -180,7 +180,8 @@
         updateCounters();
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
-        if (err.code === "ACTION_REJECTED") {
+        const msg = err?.message?.toLowerCase() || "";
+        if (err.code === 4001 || msg.includes("user rejected")) {
           status.innerText =
             "✅ You survived Level 3!\n\n" +
             "🛡️ You rejected a malicious `Permit()` signature request.\n\n" +
