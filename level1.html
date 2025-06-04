@@ -149,7 +149,15 @@
         const tx = await token.approve(spenderAddress, ethers.utils.parseEther("1000"));
         await tx.wait();
 
-        status.innerText = "💀 Oops! You got drained.\n\n👉 Scam Type: ERC20 `approve()` Exploit\nYou granted a malicious contract the ability to spend your tokens.\n\n🧠 Lesson: Always check who you're approving and for how much.";
+        status.innerText = `💀 Oops! You got drained.
+
+👉 Scam Type: ERC20 \`approve()\` Exploit
+
+You unknowingly approved a contract to spend 1,000 WGFAKE tokens on your behalf.
+
+🧨 With this approval, the malicious dApp could immediately call \`transferFrom()\` to move tokens from your wallet — without any further permission.
+
+🧠 Lesson: Always verify the contract address and token amount when approving. Never blindly click “Confirm” for token interactions you don’t trust.`;
         localStorage.setItem("w3game_level1", "drained");
 
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -158,7 +166,13 @@
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You survived Level 1!\n\n🛡️ You rejected a malicious `approve()` request.\nSmart move. The contract was trying to gain access to your tokens.";
+          status.innerText = `✅ You survived Level 1!
+
+🛡️ You rejected a dangerous \`approve()\` transaction.
+
+That approval would have allowed a contract to freely call \`transferFrom()\` and drain your WGFAKE tokens at any time.
+
+🎯 Smart move: malicious dApps often disguise these approvals as “claim” or “reward” buttons. Always read carefully.`;
           document.getElementById("nextBtn").style.display = "inline-block";
           localStorage.setItem("w3game_level1", "survived");
 
