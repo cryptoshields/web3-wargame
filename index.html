@@ -9,8 +9,7 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff;
-      background: url('kasia-derenda-7Ss09bTO5Zo-unsplash.jpg') no-repeat center center fixed;
+      background: url('ef43a353-b778-4a25-9c18-3e8f8b88d39f.png') no-repeat center center fixed;
       background-size: cover;
     }
 
@@ -21,10 +20,11 @@
       text-align: center;
       font-size: 1.1rem;
       min-height: 100vh;
+      color: #fff;
     }
 
     #main-container {
-      display: none; /* Default to hidden */
+      display: none; /* Hidden by default */
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -39,6 +39,7 @@
       width: 90%;
       text-align: center;
       box-shadow: 0 0 16px #00ffea;
+      color: #fff;
     }
 
     h1 {
@@ -119,7 +120,7 @@ Block Explorer URL: https://sepolia.etherscan.io
 
       window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0xaa36a7' }] // Sepolia
+        params: [{ chainId: '0xaa36a7' }]
       }).catch((error) => {
         console.error("Switch error:", error);
         alert("Please add Sepolia manually if the switch fails.");
@@ -129,8 +130,10 @@ Block Explorer URL: https://sepolia.etherscan.io
     window.onload = () => {
       if (isMobileDevice()) {
         document.getElementById("mobile-warning").style.display = "block";
+        document.getElementById("main-container").style.display = "none";
       } else {
         document.getElementById("main-container").style.display = "flex";
+        document.getElementById("mobile-warning").style.display = "none";
       }
     };
   </script>
