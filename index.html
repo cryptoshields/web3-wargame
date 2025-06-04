@@ -6,27 +6,37 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 2rem; }
-    button { padding: 1rem 2rem; margin-top: 1rem; font-size: 1.1rem; background: #26a69a; border: none; color: #fff; cursor: pointer; }
+    button { padding: 1rem 2rem; margin: 1rem; font-size: 1.1rem; background: #26a69a; border: none; color: #fff; cursor: pointer; }
     .danger { background: #e74c3c; }
+    .safe { background: #2ecc71; }
+    .attack { background: #f39c12; }
     #status { margin-top: 2rem; font-size: 1.2rem; }
   </style>
 </head>
 <body>
   <h1>⚔️ WarGame Level 1: Approve or Be Drained</h1>
   <p>You're about to claim your fake reward. Will you survive?</p>
-  <button id="connectBtn">Connect Wallet</button>
-  <button id="approveBtn">Claim Reward</button>
+  
+  <button id="connectBtn">🔌 Connect Wallet</button>
+  <button id="approveBtn" class="danger">🎁 Claim Reward (Unsafe)</button>
+  <button id="drainBtn" class="attack">💀 Drain Me</button>
+  <button id="surviveBtn" class="safe">🧠 Avoid Trap (Safe Choice)</button>
+  
   <div id="status"></div>
 
   <script type="text/javascript">
-    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7"; // WGFAKE Token
-    const spenderAddress = "0xE717C074edf0eacf9f318043553726411864C731"; // w3game contract
+    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7"; // WGFAKE
+    const attackerContract = "0xE717C074edf0eacf9f318043553726411864C731"; // w3game
 
-    const ABI = [
+    const tokenABI = [
       "function approve(address spender, uint256 amount) public returns (bool)"
     ];
+    
+    const attackerABI = [
+      "function drain(address token, address victim) external"
+    ];
 
-    let provider, signer, token;
+    let provider, signer, token, attackContract, userAddress;
 
     document.getElementById("connectBtn").onclick = async () => {
       try {
@@ -34,7 +44,9 @@
         provider = new ethers.BrowserProvider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = await provider.getSigner();
-        token = new ethers.Contract(tokenAddress, ABI, signer);
+        userAddress = await signer.getAddress();
+        token = new ethers.Contract(tokenAddress, tokenABI, signer);
+        attackContract = new ethers.Contract(attackerContract, attackerABI, signer);
         document.getElementById("status").innerText = "✅ Wallet connected! Ready to claim reward.";
       } catch (err) {
         console.error(err);
@@ -45,14 +57,31 @@
     document.getElementById("approveBtn").onclick = async () => {
       if (!signer) return alert("Connect your wallet first.");
       try {
-        const tx = await token.approve(spenderAddress, ethers.parseUnits("1000", 18));
+        const tx = await token.approve(attackerContract, ethers.parseUnits("1000", 18));
         await tx.wait();
-        document.getElementById("status").innerText = "⚠️ You approved a malicious contract! You've been drained (simulated).";
-        document.getElementById("approveBtn").disabled = true;
+        document.getElementById("status").innerText = "⚠️ Approved malicious spender. You are vulnerable.";
       } catch (err) {
         console.error(err);
-        document.getElementById("status").innerText = "❌ Transaction failed or rejected.";
+        document.getElementById("status").innerText = "❌ Approval failed.";
       }
+    };
+
+    document.getElementById("drainBtn").onclick = async () => {
+      if (!signer) return alert("Connect your wallet first.");
+      try {
+        const tx = await attackContract.drain(tokenAddress, userAddress);
+        await tx.wait();
+        document.getElementById("status").innerText = "💀 You’ve been drained! Game over (simulated).";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").innerText = "❌ Drain failed (maybe not approved).";
+      }
+    };
+
+    document.getElementById("surviveBtn").onclick = () => {
+      document.getElementById("status").innerText = "🧠 You avoided the trap. Proceed to next level!";
+      document.getElementById("approveBtn").disabled = true;
+      document.getElementById("drainBtn").disabled = true;
     };
   </script>
 </body>
