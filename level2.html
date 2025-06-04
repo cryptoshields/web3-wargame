@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Fake NFT Staking | Stake to Claim</title>
+  <title>Level 2 — NFT Approval Trap</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
@@ -20,11 +20,19 @@
       font-size: 0.9rem;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
     }
+    .warning-bar {
+      background-color: #ff3d00;
+      color: #fff;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
     .frame-container {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: calc(100vh - 60px);
+      height: calc(100vh - 120px); /* Adjust for top bars */
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
@@ -64,7 +72,6 @@
       color: #fff;
       text-decoration: none;
       margin-top: 2rem;
-      display: inline-block;
     }
   </style>
 </head>
@@ -73,16 +80,21 @@
     <div>Web3 War Game</div>
     <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
   </div>
+
+  <div class="warning-bar">
+    ⚠️ This is a testnet simulation. Use a burner wallet with Sepolia ETH only. Never connect a real wallet.
+  </div>
+
   <div class="frame-container">
     <div class="card">
-      <h1>🎭 Fake NFT Staking</h1>
+      <h1>🎭 Level 2: Fake NFT Staking</h1>
       <p>Stake your NFTs to earn passive rewards. Sounds legit, right?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="stakeBtn">Stake Now</button>
       </div>
       <div id="status"></div>
-      <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
+      <a href="level3_permit2_trap.html" id="nextBtn">➡️ Proceed to Level 3</a>
     </div>
   </div>
 
@@ -109,6 +121,13 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
+
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111) {
+          status.innerText = "❌ You are not on Sepolia Testnet.\nPlease switch your MetaMask network.";
+          return;
+        }
+
         const userAddress = await signer.getAddress();
         contract = new ethers.Contract(nftContract, nftABI, signer);
         status.innerText = `✅ Connected: ${userAddress}`;
@@ -127,7 +146,7 @@
         const tx = await contract.setApprovalForAll(drainerContract, true);
         await tx.wait();
 
-        status.innerText = "💀 You just approved a malicious contract to move ALL your NFTs.\n\n👉 Scam Type: setApprovalForAll Exploit\nThis allows the contract to call `transferFrom()` on ALL NFTs you own under this collection.\n\n🧠 Lesson: Never approve full control of your assets to unknown or shady dApps.";
+        status.innerText = "💀 You just approved a malicious contract to move ALL your NFTs.\n\n👉 Scam Type: `setApprovalForAll` Exploit\nThis allows the contract to call `transferFrom()` on all NFTs you own under this collection.\n\n🧠 Lesson: Never approve full control of your assets to unknown or shady dApps.";
         localStorage.setItem("w3game_level2", "drained");
 
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -136,7 +155,7 @@
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You survived Level 2!\n\n🛡️ You rejected a dangerous full-access approval request for your NFTs.\n\nWell played. Stay alert for `setApprovalForAll` traps in shady airdrop and staking dApps.";
+          status.innerText = "✅ You survived Level 2!\n\n🛡️ You rejected a dangerous full-access approval request for your NFTs.\nWell played. Stay alert for `setApprovalForAll` traps in shady staking dApps.";
           document.getElementById("nextBtn").style.display = "inline-block";
           localStorage.setItem("w3game_level2", "survived");
 
