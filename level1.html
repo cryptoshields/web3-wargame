@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Web3 War Game | Level 1 - Token Trap</title>
+  <title>Level 1 — ERC20 Approval Trap</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
@@ -20,11 +20,19 @@
       font-size: 0.9rem;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
     }
+    .warning-bar {
+      background-color: #ff3d00;
+      color: #fff;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
     .frame-container {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: calc(100vh - 60px);
+      height: calc(100vh - 120px); /* Adjust for top bars */
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
@@ -72,16 +80,21 @@
     <div>Web3 War Game</div>
     <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
   </div>
+
+  <div class="warning-bar">
+    ⚠️ This is a testnet simulation. Use a burner wallet with Sepolia ETH only. Never connect a real wallet.
+  </div>
+
   <div class="frame-container">
     <div class="card">
-      <h1>🏁 Level 1: Approve Trap</h1>
-      <p>Claim your reward of 1,000 WGFAKE tokens!</p>
+      <h1>🎯 Level 1: Claim 1,000 WGFAKE</h1>
+      <p>This looks like a token reward, but is it safe?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="claimBtn">Claim Reward</button>
       </div>
       <div id="status"></div>
-      <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
+      <a href="level2_nft_trap.html" id="nextBtn">➡️ Proceed to Level 2</a>
     </div>
   </div>
 
@@ -111,9 +124,15 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
+
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111) {
+          status.innerText = "❌ You are not on Sepolia Testnet.\nPlease switch your MetaMask network.";
+          return;
+        }
+
         const userAddress = await signer.getAddress();
         token = new ethers.Contract(tokenAddress, tokenABI, signer);
-
         status.innerText = `✅ Connected: ${userAddress}`;
       } catch (err) {
         console.error("Connection error:", err);
@@ -130,7 +149,7 @@
         const tx = await token.approve(spenderAddress, ethers.utils.parseEther("1000"));
         await tx.wait();
 
-        status.innerText = "💀 Oops! You got drained. This was a trap using `approve()`!\n\n👉 Explanation: You gave an unlimited approval to a malicious contract that can now call `transferFrom()` to take your tokens.\n\n🧠 Lesson: Always double-check approval targets. If it’s not a trusted dApp, avoid clicking approve blindly.";
+        status.innerText = "💀 Oops! You got drained.\n\n👉 Scam Type: ERC20 `approve()` Exploit\nYou granted a malicious contract the ability to spend your tokens.\n\n🧠 Lesson: Always check who you're approving and for how much.";
         localStorage.setItem("w3game_level1", "drained");
 
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -139,7 +158,7 @@
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You survived Level 1!\n\n🛡️ You avoided signing a malicious `approve()` transaction.\n\n`approve()` lets a contract move your tokens — and here, the spender WAS the trap.\n\nOnward to the next challenge!";
+          status.innerText = "✅ You survived Level 1!\n\n🛡️ You rejected a malicious `approve()` request.\nSmart move. The contract was trying to gain access to your tokens.";
           document.getElementById("nextBtn").style.display = "inline-block";
           localStorage.setItem("w3game_level1", "survived");
 
