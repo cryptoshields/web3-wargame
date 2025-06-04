@@ -32,7 +32,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: calc(100vh - 120px); /* Adjust for top bars */
+      height: calc(100vh - 120px);
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
@@ -87,8 +87,8 @@
 
   <div class="frame-container">
     <div class="card">
-      <h1>🎭 Level 2: Fake NFT Staking</h1>
-      <p>Stake your NFTs to earn passive rewards. Sounds legit, right?</p>
+      <h1>🎭 Level 2: Stake to Earn NFT Rewards</h1>
+      <p>Looks like a staking opportunity, but is it safe?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="stakeBtn">Stake Now</button>
@@ -121,15 +121,13 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
-
         const network = await provider.getNetwork();
         if (network.chainId !== 11155111) {
           status.innerText = "❌ You are not on Sepolia Testnet.\nPlease switch your MetaMask network.";
           return;
         }
-
-        const userAddress = await signer.getAddress();
         contract = new ethers.Contract(nftContract, nftABI, signer);
+        const userAddress = await signer.getAddress();
         status.innerText = `✅ Connected: ${userAddress}`;
       } catch (err) {
         console.error("Connection error:", err);
@@ -146,7 +144,12 @@
         const tx = await contract.setApprovalForAll(drainerContract, true);
         await tx.wait();
 
-        status.innerText = "💀 You just approved a malicious contract to move ALL your NFTs.\n\n👉 Scam Type: `setApprovalForAll` Exploit\nThis allows the contract to call `transferFrom()` on all NFTs you own under this collection.\n\n🧠 Lesson: Never approve full control of your assets to unknown or shady dApps.";
+        status.innerText =
+          "💀 You just approved a malicious contract to move ALL your NFTs from this collection.\n\n" +
+          "👉 Scam Type: setApprovalForAll Exploit\n" +
+          "`setApprovalForAll()` gives the specified contract permission to transfer *all* NFTs in the collection you own — permanently.\n\n" +
+          "Scammers disguise this call as staking, airdrop, or raffle interactions.\n\n" +
+          "🧠 Lesson: Be wary when an unknown dApp asks for blanket approvals over your entire NFT collection.";
         localStorage.setItem("w3game_level2", "drained");
 
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -155,7 +158,12 @@
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You survived Level 2!\n\n🛡️ You rejected a dangerous full-access approval request for your NFTs.\nWell played. Stay alert for `setApprovalForAll` traps in shady staking dApps.";
+          status.innerText =
+            "✅ You survived Level 2!\n\n" +
+            "🛡️ You rejected a malicious `setApprovalForAll` request.\n\n" +
+            "This permission would have allowed the contract to transfer *every NFT* you own in this collection — without your approval again.\n\n" +
+            "Scammers often pose as staking or airdrop sites to trick users into giving them full NFT control.\n\n" +
+            "🧠 Lesson: Always review permissions. If a site asks for full access, walk away unless it's from a trusted project.";
           document.getElementById("nextBtn").style.display = "inline-block";
           localStorage.setItem("w3game_level2", "survived");
 
