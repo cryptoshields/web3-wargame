@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Level 1 — ERC20 Approval Trap</title>
+  <title>Web3 War Game | Level 1 - Token Trap</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
@@ -64,7 +64,6 @@
       color: #fff;
       text-decoration: none;
       margin-top: 2rem;
-      display: inline-block;
     }
   </style>
 </head>
@@ -75,8 +74,8 @@
   </div>
   <div class="frame-container">
     <div class="card">
-      <h1>🎯 Level 1: Claim 1,000 WGFAKE</h1>
-      <p>This looks like a token reward, but is it safe?</p>
+      <h1>🏁 Level 1: Approve Trap</h1>
+      <p>Claim your reward of 1,000 WGFAKE tokens!</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="claimBtn">Claim Reward</button>
@@ -131,15 +130,16 @@
         const tx = await token.approve(spenderAddress, ethers.utils.parseEther("1000"));
         await tx.wait();
 
-        status.innerText = "💀 Oops! You got drained.\n\nThis was a trap using the ERC20 `approve()` function.\n\nExplanation: You gave unlimited permission to a contract that can now move your tokens using `transferFrom()`.\n\n🧠 Lesson: Never blindly approve spending permissions without knowing who the spender is!";
+        status.innerText = "💀 Oops! You got drained. This was a trap using `approve()`!\n\n👉 Explanation: You gave an unlimited approval to a malicious contract that can now call `transferFrom()` to take your tokens.\n\n🧠 Lesson: Always double-check approval targets. If it’s not a trusted dApp, avoid clicking approve blindly.";
         localStorage.setItem("w3game_level1", "drained");
 
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
         localStorage.setItem("w3game_failed", failCount + 1);
         updateCounters();
+        document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You survived Level 1!\n\n🛡️ You rejected a malicious `approve()` request.\n\nGreat job! The dApp tried to make you approve a trap spender who could drain your tokens.\n\nYou’re getting sharper!";
+          status.innerText = "✅ You survived Level 1!\n\n🛡️ You avoided signing a malicious `approve()` transaction.\n\n`approve()` lets a contract move your tokens — and here, the spender WAS the trap.\n\nOnward to the next challenge!";
           document.getElementById("nextBtn").style.display = "inline-block";
           localStorage.setItem("w3game_level1", "survived");
 
@@ -155,9 +155,7 @@
 
     window.onload = () => {
       updateCounters();
-      if (localStorage.getItem("w3game_level1") === "survived") {
-        document.getElementById("nextBtn").style.display = "inline-block";
-      }
+      document.getElementById("nextBtn").style.display = "none";
     };
   </script>
 </body>
