@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Level 3 — Permit Signature Trap</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #fff;
+      margin: 0;
+    }
+    .top-bar {
+      background: #111;
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+    .warning-bar {
+      background-color: #ff3d00;
+      color: #fff;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    .frame-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 120px);
+    }
+    .card {
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 0 18px #ff9800;
+      max-width: 540px;
+      width: 100%;
+      text-align: center;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      background: #ff9800;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 2rem;
+      font-size: 1.1rem;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+    #nextBtn {
+      display: none;
+      background: #4caf50;
+      padding: 1rem;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>Web3 War Game</div>
+    <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
+  </div>
+
+  <div class="warning-bar">
+    ⚠️ This is a testnet simulation. Use a burner wallet with Sepolia ETH only. Never connect a real wallet.
+  </div>
+
+  <div class="frame-container">
+    <div class="card">
+      <h1>📝 Level 3: Sign Permit for Staking Bonus</h1>
+      <p>This staking site asks for a signature to “authorize your rewards.” Seems harmless?</p>
+      <div class="button-container">
+        <button id="connectBtn">Connect Wallet</button>
+        <button id="signBtn">Sign Permit</button>
+      </div>
+      <div id="status"></div>
+      <a href="level4.html" id="nextBtn">➡️ Proceed to Level 4</a>
+    </div>
+  </div>
+
+  <script>
+    const tokenAddress = "0x576F64138422B797cD6c7811CCD9E948558cD9c1";
+    const spender = tokenAddress;
+    const permitABI = ["function nonces(address) view returns (uint256)", "function DOMAIN_SEPARATOR() view returns (bytes32)"];
+
+    let provider, signer, token;
+
+    function updateCounters() {
+      document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
+      document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
+    }
+
+    document.getElementById("connectBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!window.ethereum) {
+        alert("Please install MetaMask.");
+        return;
+      }
+      try {
+        status.innerText = "⏳ Connecting...";
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111) {
+          status.innerText = "❌ Not on Sepolia Testnet.";
+          return;
+        }
+        const user = await signer.getAddress();
+        token = new ethers.Contract(tokenAddress, permitABI, signer);
+        status.innerText = `✅ Connected: ${user}`;
+      } catch (err) {
+        status.innerText = "❌ Wallet connection failed.";
+        console.error(err);
+      }
+    };
+
+    document.getElementById("signBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer) return alert("Connect wallet first.");
+
+      try {
+        const user = await signer.getAddress();
+        const nonce = await token.nonces(user);
+        const deadline = Math.floor(Date.now() / 1000) + 2 * 24 * 60 * 60;
+
+        const domain = {
+          name: "WarGame FakeToken",
+          version: "1",
+          chainId: 11155111,
+          verifyingContract: tokenAddress,
+        };
+
+        const types = {
+          Permit: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint256" },
+          ],
+        };
+
+        const message = {
+          owner: user,
+          spender: spender,
+          value: ethers.utils.parseEther("1000").toString(),
+          nonce: nonce.toNumber(),
+          deadline: deadline,
+        };
+
+        status.innerText = "📜 Signing Permit message...\n\n" +
+          `Fake Reason: Authorize staking reward withdrawal\n\n` +
+          `Signing typed message...`;
+
+        await signer._signTypedData(domain, types, message);
+
+        status.innerText = "💀 You signed a malicious Permit message!\n\n" +
+          "👉 Scam Type: ERC20 `permit()` Exploit\n" +
+          "You authorized a contract to spend tokens on your behalf via off-chain signature.\n\n" +
+          "🧠 Lesson: Always read signature prompts. Malicious sites use `permit()` to bypass approvals.";
+
+        localStorage.setItem("w3game_level3", "drained");
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        document.getElementById("nextBtn").style.display = "inline-block";
+
+      } catch (err) {
+        if (err.code === "ACTION_REJECTED") {
+          status.innerText = "✅ You survived Level 3!\n\n" +
+            "🛡️ You rejected a dangerous signature request for a fake permit message.\n" +
+            "`permit()` scams are sneaky — always verify the data you're signing.";
+          document.getElementById("nextBtn").style.display = "inline-block";
+
+          localStorage.setItem("w3game_level3", "survived");
+          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
+          localStorage.setItem("w3game_survived", surviveCount + 1);
+          updateCounters();
+        } else {
+          console.error("Signature error:", err);
+          status.innerText = "⚠️ Unexpected error during signing.";
+        }
+      }
+    };
+
+    window.onload = () => {
+      updateCounters();
+      document.getElementById("nextBtn").style.display = "none";
+    };
+  </script>
+</body>
+</html>
