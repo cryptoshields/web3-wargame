@@ -8,20 +8,22 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      background: url('ef43a353-b778-4a25-9c18-3e8f8b88d39f.png') no-repeat center center fixed;
+      background-size: cover;
       color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
     }
-    .container {
-      max-width: 800px;
+    .overlay {
+      background: rgba(0, 0, 0, 0.75);
       padding: 2rem;
-      text-align: center;
-      background-color: rgba(0,0,0,0.7);
       border-radius: 12px;
+      max-width: 800px;
+      width: 95%;
       box-shadow: 0 0 20px rgba(255, 152, 0, 0.4);
+      text-align: center;
     }
     h1 {
       font-size: 2.5rem;
@@ -55,7 +57,7 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="overlay">
     <h1>⚔️ Web3 War Game</h1>
     <p>Can you survive the most dangerous traps in crypto?</p>
 
