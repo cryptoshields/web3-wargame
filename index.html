@@ -1,152 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Web3 War Game Intro</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web3 War Game - Simulation Entry</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      color: white;
-      background: url('ef43a353-b778-4a25-9c18-3e8f8b88d39f.png') center center / cover no-repeat fixed;
-      backdrop-filter: brightness(0.6);
-    }
-
-    .container {
-      background-color: rgba(0, 0, 0, 0.7);
-      max-width: 800px;
-      margin: 5vh auto;
-      padding: 2rem;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 0 20px #ff9800;
-    }
-
-    h1 {
-      color: #ff9800;
-      margin-bottom: 1rem;
-    }
-
-    p {
-      line-height: 1.6;
-      font-size: 1rem;
-    }
-
-    button {
-      padding: 0.8rem 1.5rem;
-      margin: 1rem 0.5rem;
-      background: #ff9800;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    .warning {
-      background: rgba(255, 0, 0, 0.8);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       color: #fff;
-      padding: 1rem;
-      border-radius: 10px;
-      margin: 1.5rem 0;
-      font-weight: bold;
-    }
-
-    .manual-steps {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 1rem;
-      margin: 1rem 0;
-      border-radius: 8px;
-      text-align: left;
-      font-size: 0.95rem;
-    }
-
-    .note {
-      font-size: 0.9rem;
-      color: #ccc;
-      margin-top: 0.5rem;
+      background: url('ef43a353-b778-4a25-9c18-3e8f8b88d39f.png') no-repeat center center fixed;
+      background-size: cover;
     }
 
     #mobile-warning {
       display: none;
       padding: 2rem;
-      font-size: 1.2rem;
+      background: rgba(0, 0, 0, 0.85);
       text-align: center;
-      background: #111;
-      height: 100vh;
+      font-size: 1.1rem;
+    }
+
+    #main-container {
+      display: none;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .content {
+      background: rgba(0, 0, 0, 0.85);
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 16px #00ffea;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #00ffc3;
+    }
+
+    button {
+      background: #00ffc3;
+      color: #000;
+      border: none;
+      padding: 1rem 1.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    pre {
+      text-align: left;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    a {
+      color: #00ffc3;
+      font-weight: bold;
+      display: inline-block;
+      margin-top: 1.5rem;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
   <div id="mobile-warning">
-    🚫 This simulation is not supported on mobile.<br><br>
-    Please access it from a desktop or laptop using MetaMask for full functionality.
+    🚫 <strong>This simulation is not supported on mobile devices.</strong><br><br>
+    For the best experience, use a desktop or laptop with the MetaMask extension installed.<br><br>
+    ⚠️ This project is for <strong>educational purposes only</strong>. Do not use your real wallet.<br><br>
+    Stay safe. Stay sharp. See you on desktop.
   </div>
 
-  <div class="container" id="main-content">
-    <h1>🧠 Web3 War Game</h1>
-    <p>
-      Welcome to the most dangerous simulation in Web3. Your job? Survive.
-    </p>
-    <p>
-      This game throws real Web3 attack vectors at you — unsafe approvals, fake airdrops, malicious contracts and more. Every interaction is a trap or a lesson.
-    </p>
+  <div id="main-container">
+    <div class="content">
+      <h1>🧠 Web3 War Game</h1>
+      <p>Welcome to the ultimate Web3 OPSEC training simulator.</p>
+      <p>Make it through 10 levels without getting drained. Each level is based on a real-world scam.</p>
 
-    <div class="warning">
-      🚨 Do NOT use your real wallet. <br>
-      Always use a test wallet with Sepolia ETH in MetaMask.
+      <button onclick="switchToSepolia()">🔁 Switch to Sepolia Network</button>
+
+      <p><strong>🛠️ Add Sepolia Manually to MetaMask:</strong></p>
+      <pre>
+Network Name: Sepolia Testnet
+RPC URL: https://rpc.sepolia.org
+Chain ID: 11155111
+Currency Symbol: ETH
+Block Explorer URL: https://sepolia.etherscan.io
+      </pre>
+
+      <p><strong>💡 Use MetaMask only. Do not connect real wallets.</strong></p>
+
+      <a href="level1_approve_trap.html">🚪 Start Level 1</a>
     </div>
-
-    <h3>🛠 MetaMask Setup</h3>
-    <button onclick="switchToSepolia()">🔁 Switch to Sepolia Network</button>
-    <div class="note">🦊 This works best in Chrome/Brave MetaMask. Firefox may block popups.</div>
-
-    <h4 style="margin-top: 2rem;">🌐 Add Sepolia Network Manually (if needed)</h4>
-    <div class="manual-steps">
-      <strong>Network Name:</strong> Sepolia Testnet<br />
-      <strong>New RPC URL:</strong> https://rpc.sepolia.org<br />
-      <strong>Chain ID:</strong> 11155111<br />
-      <strong>Currency Symbol:</strong> ETH<br />
-      <strong>Block Explorer URL:</strong> https://sepolia.etherscan.io
-    </div>
-
-    <button onclick="window.open('https://sepoliafaucet.com/', '_blank')">⛽️ Get Sepolia ETH</button>
-
-    <h3>🎮 Begin Simulation</h3>
-    <button onclick="window.location.href='level1.html'">▶️ Start Level 1</button>
   </div>
 
   <script>
-    async function switchToSepolia() {
-      if (typeof window.ethereum === 'undefined') {
-        alert("Please install MetaMask and use a MetaMask-enabled browser.");
+    function isMobileDevice() {
+      return /Mobi|Android|iPhone/i.test(navigator.userAgent);
+    }
+
+    function switchToSepolia() {
+      if (!window.ethereum) {
+        alert("MetaMask not found.");
         return;
       }
 
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xaa36a7' }],
-        });
-      } catch (switchError) {
-        if (switchError.code === 4902) {
-          alert("Sepolia network not found. Please add it manually using the info above.");
-        } else {
-          alert("Error switching network: " + switchError.message);
-        }
-      }
-    }
-
-    // Mobile detection
-    function isMobile() {
-      return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+      window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0xaa36a7' }] // Sepolia
+      }).catch((error) => {
+        console.error("Switch error:", error);
+        alert("Please add Sepolia manually if the switch fails.");
+      });
     }
 
     window.onload = () => {
-      if (isMobile()) {
-        document.getElementById("main-content").style.display = "none";
+      if (isMobileDevice()) {
         document.getElementById("mobile-warning").style.display = "block";
+      } else {
+        document.getElementById("main-container").style.display = "flex";
       }
     };
   </script>
