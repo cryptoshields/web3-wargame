@@ -2,111 +2,131 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Web3 War Game | Survive or Get Drained</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web3 War Game - Intro</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: url('kasia-derenda-7Ss09bTO5Zo-unsplash.jpg') no-repeat center center fixed;
-      background-size: cover;
+      background: url('ef43a353-b778-4a25-9c18-3e8f8b88d39f.png') center/cover no-repeat;
       color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
     }
+
     .overlay {
-      background: rgba(0, 0, 0, 0.75);
-      padding: 2rem;
-      border-radius: 12px;
-      max-width: 800px;
-      width: 95%;
-      box-shadow: 0 0 20px rgba(255, 152, 0, 0.4);
+      background: rgba(0, 0, 0, 0.8);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       text-align: center;
+      padding: 2rem;
     }
+
     h1 {
       font-size: 2.5rem;
       color: #ff9800;
     }
+
     p {
-      font-size: 1rem;
-      line-height: 1.6;
+      font-size: 1.1rem;
+      max-width: 700px;
+      margin: 1rem auto;
     }
-    .section {
-      margin: 2rem 0;
-    }
-    .cta-btn {
-      background: #ff9800;
+
+    button {
       padding: 1rem 2rem;
-      border: none;
+      margin: 1rem;
+      font-size: 1rem;
+      background: #ff9800;
       color: white;
-      font-size: 1.2rem;
-      text-decoration: none;
+      border: none;
       border-radius: 8px;
       cursor: pointer;
-      display: inline-block;
-      margin-top: 2rem;
     }
+
     code {
       background: #333;
-      padding: 0.3rem 0.5rem;
+      padding: 0.2rem 0.4rem;
       border-radius: 4px;
-      font-size: 0.95rem;
+      color: #fff;
+    }
+
+    .box {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 1rem;
+      border-radius: 10px;
+      margin-top: 2rem;
+      max-width: 800px;
     }
   </style>
 </head>
 <body>
   <div class="overlay">
-    <h1>⚔️ Web3 War Game</h1>
-    <p>Can you survive the most dangerous traps in crypto?</p>
+    <h1>Welcome to Web3 War Game ⚔️</h1>
+    <p>
+      This simulation will test your ability to spot malicious Web3 behaviors. <br>
+      Use a <strong>MetaMask wallet on the Sepolia Testnet</strong> to continue. <br>
+      <strong>Never use your real wallet. This is for education only.</strong>
+    </p>
 
-    <div class="section">
-      <h2>🔍 What Is This?</h2>
+    <button onclick="switchToSepolia()">🛰️ Switch to Sepolia</button>
+
+    <div class="box">
+      <h2>Add Sepolia Network Manually</h2>
+      <p>Open MetaMask → Networks → Add Network</p>
+      <p><strong>Fill in the following:</strong></p>
       <p>
-        A simulation of real Web3 scam techniques. You'll navigate fake staking pages, shady airdrops, and malicious contracts.
-        Each level is a real challenge — survive and learn or get drained.
+        <code>Network Name:</code> Sepolia Testnet<br />
+        <code>New RPC URL:</code> https://rpc.sepolia.org<br />
+        <code>Chain ID:</code> 11155111<br />
+        <code>Currency Symbol:</code> ETH<br />
+        <code>Block Explorer URL:</code> https://sepolia.etherscan.io
       </p>
     </div>
 
-    <div class="section">
-      <h2>⚠️ Disclaimer</h2>
-      <p>
-        This is an <strong>educational simulation</strong> only.<br>
-        Do <u>not</u> use a real wallet. Only use a <strong>test wallet</strong> on the Sepolia network.
-      </p>
-    </div>
-
-    <div class="section">
-      <h2>🧪 How to Play</h2>
-      <ul style="text-align: left; display: inline-block;">
-        <li>Use MetaMask (or compatible wallet)</li>
-        <li>Add Sepolia Testnet to MetaMask (see below)</li>
-        <li>Get free Sepolia ETH (faucet below)</li>
-        <li>Start at Level 1 and survive all the way to Level 10!</li>
-      </ul>
-    </div>
-
-    <div class="section">
-      <h2>💧 Get Sepolia ETH</h2>
-      <p>
-        👉 Use this faucet:  
-        <a href="https://sepoliafaucet.com" target="_blank" style="color: #4caf50;">https://sepoliafaucet.com</a>
-      </p>
-    </div>
-
-    <div class="section">
-      <h2>🔧 Add Sepolia Network to MetaMask</h2>
-      <p>Open MetaMask > Settings > Networks > Add Network</p>
-      <p><strong>Network Name:</strong> Sepolia Testnet<br>
-         <strong>RPC URL:</strong> https://rpc2.sepolia.org<br>
-         <strong>Chain ID:</strong> 11155111<br>
-         <strong>Currency:</strong> ETH<br>
-         <strong>Block Explorer:</strong> https://sepolia.etherscan.io
-      </p>
-    </div>
-
-    <a class="cta-btn" href="level1.html">🚀 Start Level 1</a>
+    <a href="level1.html"><button>🚀 Start Simulation</button></a>
   </div>
+
+  <script>
+    async function switchToSepolia() {
+      if (!window.ethereum) {
+        alert("Please install MetaMask.");
+        return;
+      }
+
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: "0xaa36a7" }]
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: "0xaa36a7",
+                  chainName: "Sepolia Testnet",
+                  rpcUrls: ["https://rpc.sepolia.org"],
+                  nativeCurrency: {
+                    name: "Sepolia ETH",
+                    symbol: "ETH",
+                    decimals: 18
+                  },
+                  blockExplorerUrls: ["https://sepolia.etherscan.io"]
+                }
+              ]
+            });
+          } catch (addError) {
+            console.error("Add Sepolia failed:", addError);
+          }
+        } else {
+          console.error("Switch to Sepolia failed:", switchError);
+        }
+      }
+    }
+  </script>
 </body>
 </html>
