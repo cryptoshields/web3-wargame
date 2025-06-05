@@ -149,7 +149,7 @@
         const tx = await token.approve(spenderAddress, ethers.constants.MaxUint256);
         await tx.wait();
 
-        status.innerText = "💀 You just got drained!\n\n👉 Scam Type: ERC20 `approve()` Exploit\nYou approved an unlimited token allowance, giving this contract full access to withdraw all your WGFAKE tokens — forever.\n\n🧠 Lesson: Avoid blindly signing token approvals, especially unlimited ones. Use tools like revoke.cash to regularly audit your allowances.";
+        status.innerText = "💀 You just got drained!\n\n👉 Scam Type: ERC20 `approve()` Exploit\nYou approved an unlimited token allowance, giving this contract full access to withdraw all your WGFAKE tokens — until you revoke the approval using a tool like https://revoke.cash.\n\n🧠 Lesson: Avoid blindly signing token approvals, especially unlimited ones. Always audit your allowances.";
         localStorage.setItem("w3game_level1", "drained");
 
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
