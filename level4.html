@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Level 4 — Delegatecall Trap</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #fff;
+      margin: 0;
+    }
+    .top-bar {
+      background: #111;
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+    .warning-bar {
+      background-color: #ff3d00;
+      color: #fff;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    .frame-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 120px);
+    }
+    .card {
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 0 18px #ff9800;
+      max-width: 540px;
+      width: 100%;
+      text-align: center;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      background: #ff9800;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 2rem;
+      font-size: 1.1rem;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+    #nextBtn {
+      display: none;
+      background: #4caf50;
+      padding: 1rem;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>Web3 War Game</div>
+    <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
+  </div>
+
+  <div class="warning-bar">
+    ⚠️ This is a testnet simulation. Use a burner wallet with Sepolia ETH only. Never connect a real wallet.
+  </div>
+
+  <div class="frame-container">
+    <div class="card">
+      <h1>🧱 Level 4: Trigger a Reward Logic</h1>
+      <p>This dApp claims it needs to run a logic contract. Will you let it?</p>
+      <div class="button-container">
+        <button id="connectBtn">Connect Wallet</button>
+        <button id="runBtn">Run Delegatecall</button>
+      </div>
+      <div id="status"></div>
+      <a href="index.html" id="nextBtn">🏁 Back to Main</a>
+    </div>
+  </div>
+
+  <script>
+    const proxyAddress = "0x6859C50e16Dbc735875FADfaee68152c84583CA4";
+    const proxyABI = ["function trigger() external"];
+
+    let provider, signer, contract;
+
+    function updateCounters() {
+      document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
+      document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
+    }
+
+    document.getElementById("connectBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!window.ethereum) {
+        alert("Please install MetaMask to use this dApp.");
+        return;
+      }
+      try {
+        status.innerText = "⏳ Connecting wallet...";
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111) {
+          status.innerText = "❌ You are not on Sepolia Testnet.\nPlease switch your MetaMask network.";
+          return;
+        }
+
+        const userAddress = await signer.getAddress();
+        contract = new ethers.Contract(proxyAddress, proxyABI, signer);
+        status.innerText = `✅ Connected: ${userAddress}`;
+      } catch (err) {
+        console.error("Connection error:", err);
+        status.innerText = "❌ Wallet connection failed.";
+      }
+    };
+
+    document.getElementById("runBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer) return alert("Connect your wallet first.");
+
+      try {
+        status.innerText = "⚙️ Executing delegate logic...";
+        const tx = await contract.trigger();
+        await tx.wait();
+
+        status.innerText = `💀 Delegatecall executed!
+
+👉 Scam Type: Delegatecall Trap
+The contract you interacted with used \`delegatecall\` to run another contract's code — but it ran in YOUR context.
+
+🧠 Lesson: \`delegatecall\` can hijack your storage, change balances, or wipe ownership. Always check proxy + logic contracts.`;
+
+        localStorage.setItem("w3game_level4", "drained");
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        document.getElementById("nextBtn").style.display = "inline-block";
+      } catch (err) {
+        if (err.code === "ACTION_REJECTED") {
+          status.innerText = `✅ You survived Level 4!
+
+🛡️ You rejected a suspicious delegatecall that would’ve executed foreign logic in your context.
+
+Smart choice. Delegate traps can easily override permissions, drain balances, or even reassign ownership.`;
+
+          localStorage.setItem("w3game_level4", "survived");
+          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
+          localStorage.setItem("w3game_survived", surviveCount + 1);
+          updateCounters();
+          document.getElementById("nextBtn").style.display = "inline-block";
+        } else {
+          console.error("Unexpected error:", err);
+          status.innerText = "⚠️ Unexpected error occurred.";
+        }
+      }
+    };
+
+    window.onload = () => {
+      updateCounters();
+      document.getElementById("nextBtn").style.display = "none";
+    };
+  </script>
+</body>
+</html>
