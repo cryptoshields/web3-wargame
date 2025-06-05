@@ -72,6 +72,7 @@
       color: #fff;
       text-decoration: none;
       margin-top: 2rem;
+      display: inline-block;
     }
   </style>
 </head>
@@ -94,7 +95,7 @@
         <button id="runBtn">Run Delegatecall</button>
       </div>
       <div id="status"></div>
-      <a href="index.html" id="nextBtn">🏁 Back to Main</a>
+      <a href="level5.html" id="nextBtn">➡️ Proceed to Level 5</a>
     </div>
   </div>
 
@@ -150,7 +151,7 @@
 👉 Scam Type: Delegatecall Trap
 The contract you interacted with used \`delegatecall\` to run another contract's code — but it ran in YOUR context.
 
-🧠 Lesson: \`delegatecall\` can hijack your storage, change balances, or wipe ownership. Always check proxy + logic contracts.`;
+🧠 Lesson: \`delegatecall\` can hijack your storage, change balances, or wipe ownership. Always verify proxy + logic contracts.`;
 
         localStorage.setItem("w3game_level4", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -163,7 +164,7 @@ The contract you interacted with used \`delegatecall\` to run another contract's
 
 🛡️ You rejected a suspicious delegatecall that would’ve executed foreign logic in your context.
 
-Smart choice. Delegate traps can easily override permissions, drain balances, or even reassign ownership.`;
+Smart choice. Delegate traps can override storage, drain funds, or assign ownership without your consent.`;
 
           localStorage.setItem("w3game_level4", "survived");
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
