@@ -72,7 +72,6 @@
       color: #fff;
       text-decoration: none;
       margin-top: 2rem;
-      display: inline-block;
     }
   </style>
 </head>
@@ -89,7 +88,7 @@
   <div class="frame-container">
     <div class="card">
       <h1>🧱 Level 4: Trigger a Reward Logic</h1>
-      <p>This dApp claims it needs to run a logic contract. Will you let it?</p>
+      <p>This dApp claims to delegate logic execution. Will you trust it?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="runBtn">Run Delegatecall</button>
@@ -100,8 +99,8 @@
   </div>
 
   <script>
-    const proxyAddress = "0x6859C50e16Dbc735875FADfaee68152c84583CA4";
-    const proxyABI = ["function trigger() external"];
+    const proxyAddress = "0x5F2715fd972F3A149b55F1B4712faf7cc90b2814";
+    const proxyABI = ["function stake() external"];
 
     let provider, signer, contract;
 
@@ -143,15 +142,16 @@
 
       try {
         status.innerText = "⚙️ Executing delegate logic...";
-        const tx = await contract.trigger();
+        const tx = await contract.stake();
         await tx.wait();
 
         status.innerText = `💀 Delegatecall executed!
 
 👉 Scam Type: Delegatecall Trap
-The contract you interacted with used \`delegatecall\` to run another contract's code — but it ran in YOUR context.
+The contract used \`delegatecall\` to run another contract's code — but in its own storage context.
 
-🧠 Lesson: \`delegatecall\` can hijack your storage, change balances, or wipe ownership. Always verify proxy + logic contracts.`;
+🧠 Lesson: Always verify the logic contract linked to proxies.
+Even a simple function like \`stake()\` can overwrite ownership, selfdestruct, or drain funds.`;
 
         localStorage.setItem("w3game_level4", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -162,9 +162,9 @@ The contract you interacted with used \`delegatecall\` to run another contract's
         if (err.code === "ACTION_REJECTED") {
           status.innerText = `✅ You survived Level 4!
 
-🛡️ You rejected a suspicious delegatecall that would’ve executed foreign logic in your context.
+🛡️ You rejected a suspicious delegatecall interaction.
 
-Smart choice. Delegate traps can override storage, drain funds, or assign ownership without your consent.`;
+Smart move. Delegatecall can override storage, wipe state, or hijack control.`;
 
           localStorage.setItem("w3game_level4", "survived");
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
