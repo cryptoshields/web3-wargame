@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Leaderboard — Approve & Pray</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #0c0c1d;
+      color: #fff;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.4rem;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2rem;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 1rem;
+      border-bottom: 1px solid #333;
+    }
+    th {
+      background: #111;
+    }
+    tr:hover {
+      background-color: rgba(255, 152, 0, 0.1);
+    }
+    a {
+      color: #ff9800;
+      text-decoration: none;
+    }
+    .back {
+      display: block;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏆 Leaderboard</h1>
+    <p>See how you rank against other players on the Sepolia testnet.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Address</th>
+          <th>Survived</th>
+          <th>Drained</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard"></tbody>
+    </table>
+    <a href="index.html" class="back">⬅️ Back to Home</a>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function loadLeaderboard() {
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .order('survived', { ascending: false });
+
+      const table = document.getElementById('leaderboard');
+
+      if (error) {
+        table.innerHTML = '<tr><td colspan="3">Error loading leaderboard.</td></tr>';
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        table.innerHTML = '<tr><td colspan="3">No data yet.</td></tr>';
+        return;
+      }
+
+      table.innerHTML = data.map(row => `
+        <tr>
+          <td>${row.address.slice(0, 6)}...${row.address.slice(-4)}</td>
+          <td>${row.survived}</td>
+          <td>${row.failed}</td>
+        </tr>
+      `).join('');
+    }
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>
