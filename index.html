@@ -2,15 +2,9 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Approve & Pray — Web3 Survival Game</title>
+  <title>Approve & Pray — Web3 War Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 0.9; }
-      50% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.9; }
-    }
-
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
@@ -39,10 +33,11 @@
     }
 
     .glow {
+      content: "";
       position: absolute;
       width: 600px;
       height: 600px;
-      background: radial-gradient(circle, rgba(0,255,255,0.15), transparent 70%);
+      background: radial-gradient(circle, rgba(255,153,0,0.2), transparent 70%);
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
@@ -54,24 +49,29 @@
       max-width: 640px;
       z-index: 1;
       text-align: center;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
       border-radius: 12px;
       padding: 2rem;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 20px rgba(255, 152, 0, 0.4);
     }
 
-    .logo {
-      font-size: 2.8rem;
-      font-weight: bold;
+    h1 {
+      font-size: 2.4rem;
       margin-bottom: 0.5rem;
-      animation: pulse 3s infinite;
-      color: #ff9800;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { text-shadow: 0 0 10px #ff9800; }
+      50% { text-shadow: 0 0 30px #ff9800; }
+      100% { text-shadow: 0 0 10px #ff9800; }
     }
 
     .tagline {
+      font-style: italic;
       font-size: 1.1rem;
-      color: #ccc;
       margin-bottom: 1.5rem;
+      color: #ccc;
     }
 
     .button {
@@ -85,10 +85,31 @@
       margin-top: 1rem;
     }
 
-    .meta-section {
+    .menu {
+      text-align: left;
+      background: #111;
+      border-radius: 12px;
+      padding: 1rem 2rem;
       margin-top: 2rem;
+      font-size: 1rem;
+      line-height: 2;
+    }
+
+    .meta-section {
+      margin-top: 2.5rem;
       font-size: 0.95rem;
       line-height: 1.6;
+    }
+
+    .logo {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
     }
 
     @media (max-width: 768px) {
@@ -106,16 +127,28 @@
     🚫 <strong>This simulation is not supported on mobile devices.</strong><br><br>
     Please use a desktop or laptop with the MetaMask extension installed.<br><br>
     ⚠️ This project is for <strong>educational purposes only</strong>. Do not use your real wallet.<br><br>
+    All interactions must be done on the <strong>Sepolia Testnet</strong>.<br><br>
     Stay safe. Stay sharp. See you on desktop.
   </div>
 
   <div id="main-content">
     <div class="glow"></div>
     <div class="content-box">
-      <div class="logo">🔥 Approve & Pray</div>
-      <div class="tagline">Can you survive the Web3 wilderness — or will you sign your soul away?</div>
+      <div class="logo">🛡️ APPROVE & PRAY</div>
+      <div class="tagline">A game of scams, signatures, and survival.</div>
 
-      <a href="level1.html" class="button">🚀 Start Level 1</a>
+      <a href="level1.html" class="button">▶️ Start Game</a>
+
+      <div class="menu">
+        <strong>The Web3 War Game</strong><br>
+        🧪 Level 1: Approve Trap<br>
+        🎭 Level 2: setApprovalForAll<br>
+        🖊️ Level 3: Permit2<br>
+        🔗 Level 4: delegatecall<br>
+        🎲 Level 5: ???<br><br>
+        📜 <a href="leaderboard.html" style="color:#00e6ff">Leaderboard</a><br>
+        🧠 <a href="learn.html" style="color:#00e6ff">Learn Before You Sign</a>
+      </div>
 
       <div class="meta-section">
         <h3>🧪 You need Sepolia ETH</h3>
