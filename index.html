@@ -2,9 +2,15 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Web3 War Game — Intro</title>
+  <title>Approve & Pray — Web3 Survival Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
@@ -33,15 +39,14 @@
     }
 
     .glow {
-      content: "";
       position: absolute;
       width: 600px;
       height: 600px;
-      background: radial-gradient(circle, rgba(0,255,255,0.2), transparent 70%);
+      background: radial-gradient(circle, rgba(0,255,255,0.15), transparent 70%);
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      filter: blur(80px);
+      filter: blur(100px);
       z-index: 0;
     }
 
@@ -55,14 +60,18 @@
       box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
     }
 
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
+    .logo {
+      font-size: 2.8rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      animation: pulse 3s infinite;
+      color: #ff9800;
     }
 
-    p {
-      font-size: 1rem;
-      margin-bottom: 1.2rem;
+    .tagline {
+      font-size: 1.1rem;
+      color: #ccc;
+      margin-bottom: 1.5rem;
     }
 
     .button {
@@ -86,7 +95,6 @@
       #main-content {
         display: none;
       }
-
       #mobile-warning {
         display: block;
       }
@@ -104,9 +112,8 @@
   <div id="main-content">
     <div class="glow"></div>
     <div class="content-box">
-      <h1>⚔️ Welcome to the ultimate WEB3 War Game</h1>
-      <p>Test your survival skills against common wallet-draining smart contract traps.</p>
-      <p>This experience uses the <strong>Sepolia testnet</strong>. You’ll simulate interactions using fake tokens, NFTs, and contracts — no real loss.</p>
+      <div class="logo">🔥 Approve & Pray</div>
+      <div class="tagline">Can you survive the Web3 wilderness — or will you sign your soul away?</div>
 
       <a href="level1.html" class="button">🚀 Start Level 1</a>
 
