@@ -68,40 +68,52 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA';
+  const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // your full key
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    async function loadLeaderboard() {
-      const { data, error } = await supabase
-        .from('leaderboard')
-        .select('*')
-        .order('survived', { ascending: false });
+  async function loadLeaderboard() {
+    const { data, error } = await supabase
+      .from('leaderboard')
+      .select('wallet_address, outcome');
 
-      const table = document.getElementById('leaderboard');
+    const table = document.getElementById('leaderboard');
 
-      if (error) {
-        table.innerHTML = '<tr><td colspan="3">Error loading leaderboard.</td></tr>';
-        console.error(error);
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        table.innerHTML = '<tr><td colspan="3">No data yet.</td></tr>';
-        return;
-      }
-
-      table.innerHTML = data.map(row => `
-        <tr>
-          <td>${row.address.slice(0, 6)}...${row.address.slice(-4)}</td>
-          <td>${row.survived}</td>
-          <td>${row.failed}</td>
-        </tr>
-      `).join('');
+    if (error || !data) {
+      table.innerHTML = '<tr><td colspan="3">Error loading leaderboard.</td></tr>';
+      console.error(error);
+      return;
     }
 
-    loadLeaderboard();
-  </script>
+    // Aggregate by wallet address
+    const results = {};
+    for (const row of data) {
+      const addr = row.wallet_address;
+      if (!results[addr]) results[addr] = { survived: 0, drained: 0 };
+      if (row.outcome === 'survived') results[addr].survived++;
+      if (row.outcome === 'drained') results[addr].drained++;
+    }
+
+    if (Object.keys(results).length === 0) {
+      table.innerHTML = '<tr><td colspan="3">No data yet.</td></tr>';
+      return;
+    }
+
+    // Sort by survived desc
+    const sorted = Object.entries(results).sort((a, b) => b[1].survived - a[1].survived);
+
+    table.innerHTML = sorted.map(([address, score]) => `
+      <tr>
+        <td>${address.slice(0, 6)}...${address.slice(-4)}</td>
+        <td>${score.survived}</td>
+        <td>${score.drained}</td>
+      </tr>
+    `).join('');
+  }
+
+  loadLeaderboard();
+</script>
+
 </body>
 </html>
