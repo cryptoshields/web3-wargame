@@ -63,6 +63,9 @@
       font-size: 1.1rem;
       white-space: pre-wrap;
       text-align: left;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 8px;
     }
     #nextBtn {
       display: none;
@@ -73,6 +76,17 @@
       text-decoration: none;
       margin-top: 2rem;
       display: inline-block;
+    }
+    details {
+      background: #222;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: #ff9800;
     }
   </style>
 </head>
@@ -101,7 +115,7 @@
 
   <script>
     const proxyAddress = "0x5F2715fd972F3A149b55F1B4712faf7cc90b2814";
-    const proxyABI = ["function stake() external"];
+    const proxyABI = ["function trigger() external"];
 
     let provider, signer, contract;
 
@@ -143,45 +157,31 @@
 
       try {
         status.innerText = "⚙️ Executing delegate logic...";
-        const tx = await contract.stake();
+        const tx = await contract.trigger();
         await tx.wait();
 
-        status.innerText = `💀 Delegatecall executed!
-
-👉 Scam Type: Delegatecall Trap  
-This proxy contract executed another contract's code using \`delegatecall\` — **in its own storage**. That external logic rewrote its internal data using YOUR input.
-
-🧠 What really happened?  
-The logic contract had a function that assigned \`owner = msg.sender\`. Since \`delegatecall\` runs in the caller's context, the proxy’s own storage was changed — now you (or an attacker) might be the owner.
-
-⚠️ Why it’s dangerous:
-- 🛠️ Storage corruption: any state variable in the proxy (like \`owner\`, \`admin\`, or \`balances\`) can be silently overwritten
-- 🔓 Access control bypass: attackers can grant themselves admin rights
-- 🔥 Self-destruct: logic can destroy the proxy (\`selfdestruct\`)
-- 💸 Fund drain: logic could pull tokens if the proxy has balances
-- 🧬 Proxy mutation: logic can reconfigure the contract to point elsewhere
-- 🪪 Identity abuse: user-triggered delegatecall might impersonate their wallet
-
-📌 **Seaport Incident Reminder**  
-Some Seaport-related phishing contracts tricked users into signing transactions routed through proxies. These proxies used delegatecall to logic contracts that:
-- Assigned ownership
-- Executed unexpected token transfers
-- Revoked trading approvals
-
-✅ **Key Takeaways**  
-| Risk                       | Impact                                     |
-|----------------------------|--------------------------------------------|
-| 🔓 Overwrites owner/admin | Attacker gains control                     |
-| 🪓 Selfdestruct            | Destroys contract permanently               |
-| 🧬 Points to bad logic     | Code becomes untrustworthy on next call    |
-| 💰 Drains proxy funds      | Executes token/ETH transfers from contract |
-| 🧠 Exploits your context   | You become the trigger for malicious code  |
-
-💡 Advanced Tip:  
-Always inspect both the **proxy contract AND its logic contract** before interacting. If you don’t understand the full execution path — **don’t sign.**
-
-Visit https://revoke.cash to monitor and revoke dangerous approvals or delegation setups.
-`;
+        status.innerHTML = `
+          <details open>
+            <summary>💀 Delegatecall executed! (Click to expand what happened)</summary>
+            <p>
+              🔎 Scam Type: Delegatecall Trap<br><br>
+              🧐 What happened?<br>
+              The contract executed another contract's code using <code>delegatecall</code>, altering its own storage using malicious logic.<br><br>
+              ⚡️ Dangers include:<br>
+              • 🚫 Overwriting variables (e.g., <code>owner</code>)<br>
+              • 🚧 Disabling access controls<br>
+              • 🔥 Selfdestructing the proxy<br>
+              • 💸 Moving ETH or tokens from storage<br>
+              • ✨ Minting NFTs / tokens without user action<br><br>
+              📄 Seaport-style Attacks:<br>
+              Attackers exploited similar mechanics in fake Seaport contracts to hijack user approvals and assets.<br><br>
+              ✅ Key Takeaways:<br>
+              - Always verify both proxy <i>and</i> logic contracts<br>
+              - Avoid contracts using <code>delegatecall</code> unless audited<br>
+              - Use tools like <a href="https://revoke.cash" target="_blank">revoke.cash</a> and <a href="https://etherscan.io" target="_blank">Etherscan</a> to explore proxy logic<br>
+            </p>
+          </details>
+        `;
 
         localStorage.setItem("w3game_level4", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
