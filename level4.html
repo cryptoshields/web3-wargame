@@ -72,6 +72,7 @@
       color: #fff;
       text-decoration: none;
       margin-top: 2rem;
+      display: inline-block;
     }
   </style>
 </head>
@@ -88,7 +89,7 @@
   <div class="frame-container">
     <div class="card">
       <h1>🧱 Level 4: Trigger a Reward Logic</h1>
-      <p>This dApp claims to delegate logic execution. Will you trust it?</p>
+      <p>This dApp claims it needs to run a logic contract. Will you let it?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="runBtn">Run Delegatecall</button>
@@ -147,11 +148,40 @@
 
         status.innerText = `💀 Delegatecall executed!
 
-👉 Scam Type: Delegatecall Trap
-The contract used \`delegatecall\` to run another contract's code — but in its own storage context.
+👉 Scam Type: Delegatecall Trap  
+This proxy contract executed another contract's code using \`delegatecall\` — **in its own storage**. That external logic rewrote its internal data using YOUR input.
 
-🧠 Lesson: Always verify the logic contract linked to proxies.
-Even a simple function like \`stake()\` can overwrite ownership, selfdestruct, or drain funds.`;
+🧠 What really happened?  
+The logic contract had a function that assigned \`owner = msg.sender\`. Since \`delegatecall\` runs in the caller's context, the proxy’s own storage was changed — now you (or an attacker) might be the owner.
+
+⚠️ Why it’s dangerous:
+- 🛠️ Storage corruption: any state variable in the proxy (like \`owner\`, \`admin\`, or \`balances\`) can be silently overwritten
+- 🔓 Access control bypass: attackers can grant themselves admin rights
+- 🔥 Self-destruct: logic can destroy the proxy (\`selfdestruct\`)
+- 💸 Fund drain: logic could pull tokens if the proxy has balances
+- 🧬 Proxy mutation: logic can reconfigure the contract to point elsewhere
+- 🪪 Identity abuse: user-triggered delegatecall might impersonate their wallet
+
+📌 **Seaport Incident Reminder**  
+Some Seaport-related phishing contracts tricked users into signing transactions routed through proxies. These proxies used delegatecall to logic contracts that:
+- Assigned ownership
+- Executed unexpected token transfers
+- Revoked trading approvals
+
+✅ **Key Takeaways**  
+| Risk                       | Impact                                     |
+|----------------------------|--------------------------------------------|
+| 🔓 Overwrites owner/admin | Attacker gains control                     |
+| 🪓 Selfdestruct            | Destroys contract permanently               |
+| 🧬 Points to bad logic     | Code becomes untrustworthy on next call    |
+| 💰 Drains proxy funds      | Executes token/ETH transfers from contract |
+| 🧠 Exploits your context   | You become the trigger for malicious code  |
+
+💡 Advanced Tip:  
+Always inspect both the **proxy contract AND its logic contract** before interacting. If you don’t understand the full execution path — **don’t sign.**
+
+Visit https://revoke.cash to monitor and revoke dangerous approvals or delegation setups.
+`;
 
         localStorage.setItem("w3game_level4", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -162,9 +192,9 @@ Even a simple function like \`stake()\` can overwrite ownership, selfdestruct, o
         if (err.code === "ACTION_REJECTED") {
           status.innerText = `✅ You survived Level 4!
 
-🛡️ You rejected a suspicious delegatecall interaction.
+🛡️ You rejected a suspicious delegatecall that would’ve executed foreign logic in your context.
 
-Smart move. Delegatecall can override storage, wipe state, or hijack control.`;
+Smart choice. Delegate traps can override storage, drain funds, or assign ownership without your consent.`;
 
           localStorage.setItem("w3game_level4", "survived");
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
