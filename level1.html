@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Level 1 — ERC20 Approval Trap</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -32,7 +33,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: calc(100vh - 120px); /* Adjust for top bars */
+      height: calc(100vh - 120px);
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
@@ -77,7 +78,7 @@
 </head>
 <body>
   <div class="top-bar">
-    <div>Web3 War Game</div>
+    <div>Approve & Pray</div>
     <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
   </div>
 
@@ -87,7 +88,7 @@
 
   <div class="frame-container">
     <div class="card">
-      <h1>🎯 Level 1: Claim 1,000 WGFAKE</h1>
+      <h1>🎯 Level 1: Claim WGFAKE</h1>
       <p>This looks like a token reward, but is it safe?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
@@ -106,68 +107,96 @@
       "function allowance(address owner, address spender) public view returns (uint256)"
     ];
 
-    let provider, signer, token;
+    const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Truncated for brevity
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let provider, signer, token, userAddress;
 
     function updateCounters() {
       document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
       document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
     }
 
+    async function logResult(result) {
+      if (!userAddress) return;
+
+      await supabase.from("leaderboard_logs").insert({
+        address: userAddress.toLowerCase(),
+        level: "1",
+        result: result,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!window.ethereum) {
-        alert("Please install MetaMask to use this dApp.");
+        alert("Please install MetaMask.");
         return;
       }
       try {
-        status.innerText = "⏳ Connecting wallet...";
+        status.innerText = "⏳ Connecting...";
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        token = new ethers.Contract(tokenAddress, tokenABI, signer);
 
         const network = await provider.getNetwork();
         if (network.chainId !== 11155111) {
-          status.innerText = "❌ You are not on Sepolia Testnet.\nPlease switch your MetaMask network.";
+          status.innerText = "❌ Please switch to Sepolia Testnet.";
           return;
         }
 
-        const userAddress = await signer.getAddress();
-        token = new ethers.Contract(tokenAddress, tokenABI, signer);
         status.innerText = `✅ Connected: ${userAddress}`;
       } catch (err) {
         console.error("Connection error:", err);
-        status.innerText = "❌ Wallet connection failed.";
+        status.innerText = "❌ Failed to connect.";
       }
     };
 
     document.getElementById("claimBtn").onclick = async () => {
       const status = document.getElementById("status");
-      if (!signer) return alert("Connect your wallet first.");
+      if (!signer || !token) return alert("Connect your wallet first.");
 
       try {
-        status.innerText = "🚨 Sending approval transaction...";
+        status.innerText = "🚨 Sending approval...";
         const tx = await token.approve(spenderAddress, ethers.constants.MaxUint256);
         await tx.wait();
 
-        status.innerText = "💀 You just got drained!\n\n👉 Scam Type: ERC20 `approve()` Exploit\nYou approved an unlimited token allowance, giving this contract full access to withdraw all your WGFAKE tokens — until you revoke the approval using a tool like https://revoke.cash.\n\n🧠 Lesson: Avoid blindly signing token approvals, especially unlimited ones. Always audit your allowances.";
-        localStorage.setItem("w3game_level1", "drained");
+        status.innerText = `💀 Unlimited Approval Granted!
 
+👉 Scam Type: ERC20 \`approve()\` Trap
+You just granted this contract permission to move ALL your WGFAKE tokens.
+
+🛑 Revoke this ASAP using:
+🔗 https://revoke.cash
+
+🧠 Tip: Always limit approvals, and never trust flashy "Claim" buttons without reading the transaction.`;
+
+        localStorage.setItem("w3game_level1", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
         localStorage.setItem("w3game_failed", failCount + 1);
         updateCounters();
+        await logResult("drained");
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You survived Level 1!\n\n🛡️ You rejected a suspicious unlimited `approve()` request.\nThat transaction would’ve let the contract move ALL your tokens without limit.\n\nNice job spotting the red flag.";
-          document.getElementById("nextBtn").style.display = "inline-block";
-          localStorage.setItem("w3game_level1", "survived");
+          status.innerText = `✅ You survived Level 1!
 
+🛡️ You rejected a suspicious approval request that would’ve exposed all your tokens.
+
+Stay vigilant. Approve with caution.`;
+          localStorage.setItem("w3game_level1", "survived");
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
           updateCounters();
+          await logResult("survived");
+          document.getElementById("nextBtn").style.display = "inline-block";
         } else {
-          console.error("Unexpected error:", err);
-          status.innerText = "⚠️ Unexpected error occurred.";
+          console.error(err);
+          status.innerText = "⚠️ Unexpected error.";
         }
       }
     };
