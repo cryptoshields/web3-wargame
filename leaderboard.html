@@ -11,31 +11,45 @@
       font-family: 'Segoe UI', sans-serif;
       background: #0c0c1d;
       color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
     }
     .container {
-      max-width: 720px;
-      margin: 0 auto;
+      width: 100%;
+      max-width: 800px;
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 12px;
       padding: 2rem;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
       text-align: center;
     }
     h1 {
-      font-size: 2.4rem;
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
       margin-bottom: 1rem;
+      font-size: 1rem;
+      color: #ccc;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 2rem;
+      margin-top: 1rem;
       background: rgba(0, 0, 0, 0.6);
       border-radius: 8px;
       overflow: hidden;
     }
     th, td {
-      padding: 1rem;
+      padding: 0.8rem;
       border-bottom: 1px solid #333;
     }
     th {
       background: #111;
+      font-weight: bold;
     }
     tr:hover {
       background-color: rgba(255, 152, 0, 0.1);
@@ -45,15 +59,16 @@
       text-decoration: none;
     }
     .back {
-      display: block;
-      margin-top: 2rem;
+      display: inline-block;
+      margin-top: 1.5rem;
+      font-size: 0.95rem;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🏆 Leaderboard</h1>
-    <p>See how you rank against other players on the Sepolia testnet.</p>
+    <p>Live scores based on log data from Supabase — Sepolia Testnet only.</p>
     <table>
       <thead>
         <tr>
@@ -68,52 +83,47 @@
   </div>
 
   <script>
-  const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA'; // your full key
+    const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA';
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function loadLeaderboard() {
-    const { data, error } = await supabase
-      .from('leaderboard')
-      .select('wallet_address, outcome');
+    async function loadLeaderboard() {
+      const { data, error } = await supabase
+        .from('logs')
+        .select('address, level, outcome');
 
-    const table = document.getElementById('leaderboard');
+      const leaderboard = {};
 
-    if (error || !data) {
-      table.innerHTML = '<tr><td colspan="3">Error loading leaderboard.</td></tr>';
-      console.error(error);
-      return;
+      if (error) {
+        console.error(error);
+        document.getElementById('leaderboard').innerHTML = '<tr><td colspan="3">Error loading data</td></tr>';
+        return;
+      }
+
+      for (const row of data) {
+        const addr = row.address;
+        if (!leaderboard[addr]) {
+          leaderboard[addr] = { survived: 0, failed: 0 };
+        }
+        if (row.outcome === 'survived') leaderboard[addr].survived++;
+        else if (row.outcome === 'drained') leaderboard[addr].failed++;
+      }
+
+      const rows = Object.entries(leaderboard)
+        .sort(([, a], [, b]) => b.survived - a.survived)
+        .map(([address, stats]) => `
+          <tr>
+            <td>${address.slice(0, 6)}...${address.slice(-4)}</td>
+            <td>${stats.survived}</td>
+            <td>${stats.failed}</td>
+          </tr>
+        `).join('');
+
+      document.getElementById('leaderboard').innerHTML = rows || '<tr><td colspan="3">No entries yet</td></tr>';
     }
 
-    // Aggregate by wallet address
-    const results = {};
-    for (const row of data) {
-      const addr = row.wallet_address;
-      if (!results[addr]) results[addr] = { survived: 0, drained: 0 };
-      if (row.outcome === 'survived') results[addr].survived++;
-      if (row.outcome === 'drained') results[addr].drained++;
-    }
-
-    if (Object.keys(results).length === 0) {
-      table.innerHTML = '<tr><td colspan="3">No data yet.</td></tr>';
-      return;
-    }
-
-    // Sort by survived desc
-    const sorted = Object.entries(results).sort((a, b) => b[1].survived - a[1].survived);
-
-    table.innerHTML = sorted.map(([address, score]) => `
-      <tr>
-        <td>${address.slice(0, 6)}...${address.slice(-4)}</td>
-        <td>${score.survived}</td>
-        <td>${score.drained}</td>
-      </tr>
-    `).join('');
-  }
-
-  loadLeaderboard();
-</script>
-
+    loadLeaderboard();
+  </script>
 </body>
 </html>
