@@ -49,6 +49,7 @@
     }
     .button-container {
       display: flex;
+      flex-wrap: wrap;
       justify-content: center;
       gap: 1rem;
       margin-top: 1rem;
@@ -61,6 +62,10 @@
       border-radius: 8px;
       color: #fff;
       cursor: pointer;
+    }
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
     }
     #status {
       margin-top: 2rem;
@@ -152,7 +157,9 @@
       <p>This looks like a token reward, but is it safe?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
-        <button id="claimBtn">Claim Reward</button>
+        <button id="faucetBtn" disabled>Claim 100 WGFAKE Tokens</button>
+        <button id="claimBtn" disabled>Claim Reward</button>
+        <button id="revokeBtn" disabled>Revoke Approval</button>
       </div>
       <div id="status"></div>
       <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
@@ -175,11 +182,12 @@
       "function approve(address spender, uint256 amount) public returns (bool)",
       "function allowance(address owner, address spender) public view returns (uint256)",
       "function balanceOf(address account) public view returns (uint256)",
-      "function transferFrom(address from, address to, uint256 amount) public returns (bool)"
+      "function transferFrom(address from, address to, uint256 amount) public returns (bool)",
+      "function faucet() external"
     ];
 
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA'; // Replace with your Supabase key
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let provider, signer, token, userAddress;
@@ -191,12 +199,16 @@
 
     async function logResult(result) {
       if (!userAddress) return;
-      await supabase.from("leaderboard_logs").insert({
-        address: userAddress.toLowerCase(),
-        level: "1",
-        outcome: result,
-        timestamp: new Date().toISOString()
-      });
+      try {
+        await supabase.from("leaderboard_logs").insert({
+          address: userAddress.toLowerCase(),
+          level: "1",
+          outcome: result,
+          timestamp: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error("Supabase error:", err);
+      }
     }
 
     function showOverlay(msg) {
@@ -204,6 +216,7 @@
       div.className = "overlay-popup";
       div.innerText = msg;
       document.body.appendChild(div);
+      setTimeout(() => div.remove(), 3000);
     }
 
     function animateTrap() {
@@ -235,6 +248,7 @@
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
         token = new ethers.Contract(tokenAddress, tokenABI, signer);
+        console.log("Token contract initialized at:", tokenAddress);
 
         const network = await provider.getNetwork();
         if (network.chainId !== 11155111) {
@@ -243,9 +257,45 @@
         }
 
         status.innerText = `✅ Connected: ${userAddress}`;
+        document.getElementById("faucetBtn").disabled = false;
+        document.getElementById("revokeBtn").disabled = false;
+        const balance = await token.balanceOf(userAddress);
+        document.getElementById("claimBtn").disabled = balance.lt(ethers.utils.parseEther("100"));
       } catch (err) {
         console.error("Connection error:", err);
-        status.innerText = "❌ Failed to connect.";
+        status.innerText = "❌ Failed to connect: " + (err.message || "Try again.");
+      }
+    };
+
+    document.getElementById("faucetBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer || !token) return alert("Connect your wallet first.");
+      try {
+        status.innerText = "⏳ Claiming 100 WGFAKE tokens...";
+        const tx = await token.faucet();
+        await tx.wait();
+        const balance = await token.balanceOf(userAddress);
+        status.innerText = `✅ Successfully claimed 100 WGFAKE tokens!\nCurrent balance: ${ethers.utils.formatEther(balance)} WGFAKE`;
+        document.getElementById("claimBtn").disabled = balance.lt(ethers.utils.parseEther("100"));
+        showOverlay("🎉 Tokens Claimed!");
+      } catch (err) {
+        console.error("Faucet error:", err);
+        status.innerText = "❌ Failed to claim tokens: " + (err.reason || err.message || "Try again?");
+      }
+    };
+
+    document.getElementById("revokeBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer || !token) return alert("Connect your wallet first.");
+      try {
+        status.innerText = "⏳ Revoking approval...";
+        const tx = await token.approve(scammerAddress, 0);
+        await tx.wait();
+        status.innerText = `✅ Approval revoked! The scammer can no longer transfer your tokens.`;
+        showOverlay("🛡️ Approval Revoked!");
+      } catch (err) {
+        console.error("Revoke error:", err);
+        status.innerText = "❌ Failed to revoke approval: " + (err.reason || err.message || "Try again?");
       }
     };
 
@@ -254,45 +304,47 @@
       if (!signer || !token) return alert("Connect your wallet first.");
 
       try {
-        status.innerText = "🚨 Sending approval...";
-        const approveAmount = ethers.utils.parseEther("1000");
-        const tx = await token.approve(scammerAddress, approveAmount);
-        await tx.wait();
-
-        const allowance = await token.allowance(userAddress, scammerAddress);
         const balance = await token.balanceOf(userAddress);
-
-        if (allowance.gte(approveAmount) && balance.gte(approveAmount)) {
-          const tx2 = await token.transferFrom(userAddress, scammerAddress, approveAmount);
-          await tx2.wait();
+        if (balance.lt(ethers.utils.parseEther("100"))) {
+          status.innerText = "❌ Insufficient WGFAKE balance. Claim tokens using the faucet first.";
+          return;
         }
 
-        animateTrap();
-        showOverlay("⚠️ Tokens Drained!");
+        status.innerText = "🚨 Sending approval...";
+        const approveAmount = ethers.utils.parseEther("100");
+        const tx = await token.approve(scammerAddress, approveAmount);
+        await tx.wait();
+        status.innerText = "✅ Approval transaction confirmed. Checking allowance...";
 
-        status.innerText = `💀 Approval Granted + Tokens Drained!
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`
-You just gave access to your tokens — and the contract took them immediately.
+        const allowance = await token.allowance(userAddress, scammerAddress);
+        console.log("Allowance:", ethers.utils.formatEther(allowance), "WGFAKE");
 
-🛑 Revoke using:
-🔗 https://revoke.cash
+        if (allowance.lt(approveAmount)) {
+          status.innerText = "❌ Allowance not set correctly. Please try again.";
+          return;
+        }
 
-🧠 Tip: Always read transactions, and never approve blindly.`;
-
-        localStorage.setItem("w3game_level1", "drained");
-        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
-        localStorage.setItem("w3game_failed", failCount + 1);
-        updateCounters();
-        await logResult("drained");
+        if (balance.gte(approveAmount)) {
+          status.innerText = "🚨 Simulating scammer draining tokens...";
+          const tx2 = await token.transferFrom(userAddress, scammerAddress, approveAmount);
+          await tx2.wait();
+          animateTrap();
+          showOverlay("⚠️ Tokens Drained!");
+          status.innerText = `💀 Approval Granted + Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nYou just gave access to your tokens — and the scammer took them immediately.\n\n🛑 Revoke using:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions, and never approve blindly.`;
+          localStorage.setItem("w3game_level1", "drained");
+          let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+          localStorage.setItem("w3game_failed", failCount + 1);
+          updateCounters();
+          await logResult("drained");
+        } else {
+          status.innerText = "❌ Insufficient balance after approval. Claim more tokens.";
+        }
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = `✅ You survived Level 1!
-
-🛡️ You rejected a suspicious approval request that could’ve drained your tokens.
-
-Stay vigilant.`;
+          status.innerText = `✅ You survived Level 1!\n\n🛡️ You rejected a suspicious approval request that could’ve drained your tokens.\n\nStay vigilant.`;
           localStorage.setItem("w3game_level1", "survived");
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
@@ -300,8 +352,8 @@ Stay vigilant.`;
           await logResult("survived");
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
-          console.error(err);
-          status.innerText = "⚠️ Unexpected error.\n" + (err.reason || err.message || "Check allowance/balance?");
+          console.error("Error:", err);
+          status.innerText = `⚠️ Error: ${err.reason || err.message || "Check allowance/balance or try again."}`;
         }
       }
     };
@@ -309,6 +361,29 @@ Stay vigilant.`;
     window.onload = () => {
       updateCounters();
       document.getElementById("nextBtn").style.display = "none";
+      if (window.ethereum) {
+        window.ethereum.on("chainChanged", (chainId) => {
+          if (parseInt(chainId) !== 11155111) {
+            document.getElementById("status").innerText = "❌ Please switch to Sepolia Testnet.";
+            document.getElementById("faucetBtn").disabled = true;
+            document.getElementById("claimBtn").disabled = true;
+            document.getElementById("revokeBtn").disabled = true;
+            signer = null;
+            token = null;
+          }
+        });
+
+        window.ethereum.on("accountsChanged", (accounts) => {
+          if (accounts.length === 0) {
+            document.getElementById("status").innerText = "❌ Wallet disconnected. Please reconnect.";
+            document.getElementById("faucetBtn").disabled = true;
+            document.getElementById("claimBtn").disabled = true;
+            document.getElementById("revokeBtn").disabled = true;
+            signer = null;
+            token = null;
+          }
+        });
+      }
     };
   </script>
 </body>
