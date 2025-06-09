@@ -172,10 +172,12 @@
   const tokenAddress = "0xc93f592f0541c6dBAab200Af9E58ECE17ea1B60f";
   const spenderAddress = "0x4231c68D8b2500307507F324fd80B2eB3E206785";
   const tokenABI = [
-    "function approve(address spender, uint256 amount) public returns (bool)",
-    "function allowance(address owner, address spender) public view returns (uint256)",
-    "function transferFrom(address sender, address recipient, uint256 amount) public returns (bool)"
-  ];
+  "function approve(address spender, uint256 amount) public returns (bool)",
+  "function allowance(address owner, address spender) public view returns (uint256)",
+  "function transferFrom(address sender, address recipient, uint256 amount) public returns (bool)",
+  "function balanceOf(address owner) public view returns (uint256)"
+];
+
 
   const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJI...'; // keep this truncated safely
