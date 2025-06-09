@@ -92,7 +92,7 @@
     async function loadLeaderboard() {
       const { data, error } = await supabase
         .from('leaderboard_logs')
-        .select('address, result')
+        .select('address, outcome')
         .order('timestamp', { ascending: false });
 
       const table = document.getElementById("leaderboard");
