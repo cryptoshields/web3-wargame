@@ -11,6 +11,7 @@
       background: linear-gradient(135deg, #1a1a2e, #16213e);
       color: #fff;
       margin: 0;
+      overflow-x: hidden;
     }
     .top-bar {
       background: #111;
@@ -31,30 +32,20 @@
     }
     .frame-container {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
-      padding: 2rem;
-      gap: 2rem;
-      flex-wrap: wrap;
+      height: calc(100vh - 120px);
+      position: relative;
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
       border-radius: 12px;
       padding: 2rem;
       box-shadow: 0 0 18px #ff9800;
-      max-width: 480px;
+      max-width: 540px;
       width: 100%;
       text-align: center;
-    }
-    .info-box {
-      background: #222;
-      border: 1px solid #ff9800;
-      padding: 1.5rem;
-      border-radius: 10px;
-      max-width: 480px;
-      width: 100%;
-      font-size: 0.95rem;
-      line-height: 1.5;
+      z-index: 2;
     }
     .button-container {
       display: flex;
@@ -85,7 +76,63 @@
       color: #fff;
       text-decoration: none;
       margin-top: 2rem;
-      display: inline-block;
+    }
+    .token-drain {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 120px;
+      height: 120px;
+      margin-top: -60px;
+      margin-left: -60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, red, transparent 70%);
+      animation: drain 0.7s ease-out;
+      pointer-events: none;
+      z-index: 5;
+    }
+    @keyframes drain {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(10); opacity: 0; }
+    }
+    .chain-break {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      font-size: 2rem;
+      color: #ff3d00;
+      animation: pulse 1.5s ease-out;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.5); opacity: 0.2; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    .overlay-popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      padding: 1rem 1.5rem;
+      border: 2px solid #ff9800;
+      color: #fff;
+      border-radius: 12px;
+      font-size: 1rem;
+      z-index: 999;
+      animation: fadeOut 3s forwards;
+    }
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; display: none; }
+    }
+    .tooltip-box {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #333;
+      border-left: 4px solid #ff9800;
+      text-align: left;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -109,23 +156,15 @@
       </div>
       <div id="status"></div>
       <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
-    </div>
-
-    <div class="info-box">
-      <h3>🔎 Understanding <code>approve()</code></h3>
-      <p>
-        When you approve a contract to spend your tokens using
-        <code>approve(spender, amount)</code>, you're giving it full permission
-        to transfer up to that amount without asking again.
-      </p>
-      <p>
-        This approval doesn't go away automatically. Even if you transfer the
-        tokens yourself, the contract can still access your wallet — unless you
-        revoke it manually.
-      </p>
-      <p>
-        🛑 <strong>Use</strong> <a href="https://revoke.cash" target="_blank" style="color: #ff9800;">revoke.cash</a> to remove unnecessary token approvals after interacting with unknown dApps.
-      </p>
+      <div class="tooltip-box">
+        💡 <strong>Did you know?</strong><br>
+        ERC20 `approve()` gives another address permission to move your tokens. <br>
+        Approvals remain until revoked — scammers rely on this.
+        <br><br>
+        For NFTs, the function may look like:<br>
+        <code>approve(address to, uint256 tokenId)</code>
+        — which can expose individual tokens to transfers!
+      </div>
     </div>
   </div>
 
@@ -138,7 +177,7 @@
     ];
 
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
-    const SUPABASE_ANON_KEY = 'your_anon_key_here'; // replace with your actual anon key
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJI...'; // Truncated for safety
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let provider, signer, token, userAddress;
@@ -150,13 +189,35 @@
 
     async function logResult(result) {
       if (!userAddress) return;
-
       await supabase.from("leaderboard_logs").insert({
         address: userAddress.toLowerCase(),
         level: "1",
         outcome: result,
         timestamp: new Date().toISOString()
       });
+    }
+
+    function showOverlay(msg) {
+      const div = document.createElement("div");
+      div.className = "overlay-popup";
+      div.innerText = msg;
+      document.body.appendChild(div);
+    }
+
+    function animateTrap() {
+      const tokenEffect = document.createElement("div");
+      tokenEffect.className = "token-drain";
+      document.body.appendChild(tokenEffect);
+
+      const chainBreak = document.createElement("div");
+      chainBreak.className = "chain-break";
+      chainBreak.innerHTML = "⛓️💥";
+      document.body.appendChild(chainBreak);
+
+      setTimeout(() => {
+        tokenEffect.remove();
+        chainBreak.remove();
+      }, 1000);
     }
 
     document.getElementById("connectBtn").onclick = async () => {
@@ -194,6 +255,9 @@
         status.innerText = "🚨 Sending approval...";
         const tx = await token.approve(spenderAddress, ethers.constants.MaxUint256);
         await tx.wait();
+
+        animateTrap();
+        showOverlay("⚠️ Unlimited Approval Granted!");
 
         status.innerText = `💀 Unlimited Approval Granted!
 
