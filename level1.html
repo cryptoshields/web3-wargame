@@ -169,146 +169,145 @@
   </div>
 
   <script>
-  const tokenAddress = "0xc93f592f0541c6dBAab200Af9E58ECE17ea1B60f";
-  const spenderAddress = "0x4231c68D8b2500307507F324fd80B2eB3E206785";
-  const tokenABI = [
-  "function approve(address spender, uint256 amount) public returns (bool)",
-  "function allowance(address owner, address spender) public view returns (uint256)",
-  "function transferFrom(address sender, address recipient, uint256 amount) public returns (bool)",
-  "function balanceOf(address owner) public view returns (uint256)"
-];
+    const tokenAddress = "0xc93f592f0541c6dBAab200Af9E58ECE17ea1B60f";
+    const scammerAddress = "0x4231c68D8b2500307507F324fd80B2eB3E206785";
+    const tokenABI = [
+      "function approve(address spender, uint256 amount) public returns (bool)",
+      "function allowance(address owner, address spender) public view returns (uint256)",
+      "function balanceOf(address account) public view returns (uint256)",
+      "function transferFrom(address from, address to, uint256 amount) public returns (bool)"
+    ];
 
+    const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJI...'; // keep this truncated safely
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let provider, signer, token, userAddress;
 
-  let provider, signer, token, userAddress;
-
-  function updateCounters() {
-    document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
-    document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
-  }
-
-  async function logResult(result) {
-    if (!userAddress) return;
-    await supabase.from("leaderboard_logs").insert({
-      address: userAddress.toLowerCase(),
-      level: "1",
-      outcome: result,
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  function showOverlay(msg) {
-    const div = document.createElement("div");
-    div.className = "overlay-popup";
-    div.innerText = msg;
-    document.body.appendChild(div);
-  }
-
-  function animateTrap() {
-    const tokenEffect = document.createElement("div");
-    tokenEffect.className = "token-drain";
-    document.body.appendChild(tokenEffect);
-
-    const chainBreak = document.createElement("div");
-    chainBreak.className = "chain-break";
-    chainBreak.innerHTML = "⛓️💥";
-    document.body.appendChild(chainBreak);
-
-    setTimeout(() => {
-      tokenEffect.remove();
-      chainBreak.remove();
-    }, 1000);
-  }
-
-  document.getElementById("connectBtn").onclick = async () => {
-    const status = document.getElementById("status");
-    if (!window.ethereum) {
-      alert("Please install MetaMask.");
-      return;
+    function updateCounters() {
+      document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
+      document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
     }
-    try {
-      status.innerText = "⏳ Connecting...";
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
-      token = new ethers.Contract(tokenAddress, tokenABI, signer);
 
-      const network = await provider.getNetwork();
-      if (network.chainId !== 11155111) {
-        status.innerText = "❌ Please switch to Sepolia Testnet.";
+    async function logResult(result) {
+      if (!userAddress) return;
+      await supabase.from("leaderboard_logs").insert({
+        address: userAddress.toLowerCase(),
+        level: "1",
+        outcome: result,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    function showOverlay(msg) {
+      const div = document.createElement("div");
+      div.className = "overlay-popup";
+      div.innerText = msg;
+      document.body.appendChild(div);
+    }
+
+    function animateTrap() {
+      const tokenEffect = document.createElement("div");
+      tokenEffect.className = "token-drain";
+      document.body.appendChild(tokenEffect);
+
+      const chainBreak = document.createElement("div");
+      chainBreak.className = "chain-break";
+      chainBreak.innerHTML = "⛓️💥";
+      document.body.appendChild(chainBreak);
+
+      setTimeout(() => {
+        tokenEffect.remove();
+        chainBreak.remove();
+      }, 1000);
+    }
+
+    document.getElementById("connectBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!window.ethereum) {
+        alert("Please install MetaMask.");
         return;
       }
+      try {
+        status.innerText = "⏳ Connecting...";
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        token = new ethers.Contract(tokenAddress, tokenABI, signer);
 
-      status.innerText = `✅ Connected: ${userAddress}`;
-    } catch (err) {
-      console.error("Connection error:", err);
-      status.innerText = "❌ Failed to connect.";
-    }
-  };
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111) {
+          status.innerText = "❌ Please switch to Sepolia Testnet.";
+          return;
+        }
 
-  document.getElementById("claimBtn").onclick = async () => {
-    const status = document.getElementById("status");
-    if (!signer || !token) return alert("Connect your wallet first.");
+        status.innerText = `✅ Connected: ${userAddress}`;
+      } catch (err) {
+        console.error("Connection error:", err);
+        status.innerText = "❌ Failed to connect.";
+      }
+    };
 
-    try {
-      status.innerText = "🚨 Sending approval...";
-      const tx = await token.approve(spenderAddress, ethers.utils.parseUnits("1000", 18));
-      await tx.wait();
+    document.getElementById("claimBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer || !token) return alert("Connect your wallet first.");
 
-      // Simulate malicious token drain
-      const drainTx = await token.transferFrom(userAddress, spenderAddress, ethers.utils.parseUnits("10", 18));
-      await drainTx.wait();
+      try {
+        status.innerText = "🚨 Sending approval...";
+        const tx = await token.approve(scammerAddress, ethers.constants.MaxUint256);
+        await tx.wait();
 
-      animateTrap();
-      showOverlay("⚠️ Unlimited Approval Granted!");
+        // Now simulate the token drain using transferFrom
+        const balance = await token.balanceOf(userAddress);
+        if (balance.gt(0)) {
+          const tx2 = await token.transferFrom(userAddress, scammerAddress, balance);
+          await tx2.wait();
+        }
 
-      status.innerText = `💀 Unlimited Approval Granted!
+        animateTrap();
+        showOverlay("⚠️ Tokens Drained!");
 
-👉 Scam Type: ERC20 \`approve()\` Trap
-You just granted this contract permission to move ALL your WGFAKE tokens.
+        status.innerText = `💀 Unlimited Approval Granted + Tokens Drained!
 
-🚨 The contract just drained 10 WGFAKE to the attacker's address.
+👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`
+You just granted this contract permission to move ALL your WGFAKE tokens... and it used it immediately.
 
 🛑 Revoke this ASAP using:
 🔗 https://revoke.cash
 
 🧠 Tip: Always limit approvals, and never trust flashy "Claim" buttons without reading the transaction.`;
 
-      localStorage.setItem("w3game_level1", "drained");
-      let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
-      localStorage.setItem("w3game_failed", failCount + 1);
-      updateCounters();
-      await logResult("drained");
-      document.getElementById("nextBtn").style.display = "inline-block";
-    } catch (err) {
-      if (err.code === "ACTION_REJECTED") {
-        status.innerText = `✅ You survived Level 1!
+        localStorage.setItem("w3game_level1", "drained");
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        await logResult("drained");
+        document.getElementById("nextBtn").style.display = "inline-block";
+      } catch (err) {
+        if (err.code === "ACTION_REJECTED") {
+          status.innerText = `✅ You survived Level 1!
 
 🛡️ You rejected a suspicious approval request that would’ve exposed all your tokens.
 
 Stay vigilant. Approve with caution.`;
-        localStorage.setItem("w3game_level1", "survived");
-        let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
-        localStorage.setItem("w3game_survived", surviveCount + 1);
-        updateCounters();
-        await logResult("survived");
-        document.getElementById("nextBtn").style.display = "inline-block";
-      } else {
-        console.error(err);
-        status.innerText = "⚠️ Unexpected error.";
+          localStorage.setItem("w3game_level1", "survived");
+          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
+          localStorage.setItem("w3game_survived", surviveCount + 1);
+          updateCounters();
+          await logResult("survived");
+          document.getElementById("nextBtn").style.display = "inline-block";
+        } else {
+          console.error(err);
+          status.innerText = "⚠️ Unexpected error.\n" + (err.reason || err.message || "Check token balance?");
+        }
       }
-    }
-  };
+    };
 
-  window.onload = () => {
-    updateCounters();
-    document.getElementById("nextBtn").style.display = "none";
-  };
-</script>
-
+    window.onload = () => {
+      updateCounters();
+      document.getElementById("nextBtn").style.display = "none";
+    };
+  </script>
 </body>
 </html>
