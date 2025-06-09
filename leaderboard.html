@@ -2,189 +2,133 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Level 1 — ERC20 Approval Trap</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <title>Leaderboard — Approve & Pray</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
-      font-family: sans-serif;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      color: #fff;
       margin: 0;
-    }
-    .top-bar {
-      background: #111;
-      padding: 0.8rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.9rem;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-    }
-    .warning-bar {
-      background-color: #ff3d00;
+      font-family: 'Segoe UI', sans-serif;
+      background: #0c0c1d;
       color: #fff;
-      padding: 0.75rem;
-      text-align: center;
-      font-weight: bold;
-      font-size: 0.9rem;
-    }
-    .frame-container {
       display: flex;
-      align-items: center;
       justify-content: center;
-      height: calc(100vh - 120px);
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
     }
-    .card {
-      background: rgba(0, 0, 0, 0.85);
+    .container {
+      width: 100%;
+      max-width: 800px;
+      background: rgba(0, 0, 0, 0.75);
       border-radius: 12px;
       padding: 2rem;
-      box-shadow: 0 0 18px #ff9800;
-      max-width: 540px;
-      width: 100%;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
       text-align: center;
     }
-    .button-container {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin-top: 1rem;
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
     }
-    button {
-      padding: 1rem 2rem;
+    p {
+      margin-bottom: 1rem;
       font-size: 1rem;
-      background: #ff9800;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      cursor: pointer;
+      color: #ccc;
     }
-    #status {
-      margin-top: 2rem;
-      font-size: 1.1rem;
-      white-space: pre-wrap;
-      text-align: left;
-    }
-    #nextBtn {
-      display: none;
-      background: #4caf50;
-      padding: 1rem;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background: rgba(0, 0, 0, 0.6);
       border-radius: 8px;
-      color: #fff;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 0.8rem;
+      border-bottom: 1px solid #333;
+    }
+    th {
+      background: #111;
+      font-weight: bold;
+    }
+    tr:hover {
+      background-color: rgba(255, 152, 0, 0.1);
+    }
+    a {
+      color: #ff9800;
       text-decoration: none;
-      margin-top: 2rem;
+    }
+    .back {
+      display: inline-block;
+      margin-top: 1.5rem;
+      font-size: 0.95rem;
     }
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <div>Approve & Pray</div>
-    <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
-  </div>
-
-  <div class="warning-bar">
-    ⚠️ Testnet Only. Use a burner wallet on Sepolia.
-  </div>
-
-  <div class="frame-container">
-    <div class="card">
-      <h1>🎯 Level 1: Claim 1,000 WGFAKE</h1>
-      <p>This looks like a token reward, but is it safe?</p>
-      <div class="button-container">
-        <button id="connectBtn">Connect Wallet</button>
-        <button id="claimBtn">Claim Reward</button>
-      </div>
-      <div id="status"></div>
-      <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
-    </div>
+  <div class="container">
+    <h1>🏆 Leaderboard</h1>
+    <p>See how players are surviving (or getting drained) on Sepolia testnet.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Address</th>
+          <th>Survived</th>
+          <th>Drained</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard"></tbody>
+    </table>
+    <a href="index.html" class="back">⬅️ Back to Home</a>
   </div>
 
   <script>
-    const tokenAddress = "0xc93f592f0541c6dBAab200Af9E58ECE17ea1B60f";
-    const spenderAddress = "0x4231c68D8b2500307507F324fd80B2eB3E206785";
-    const tokenABI = [
-      "function approve(address spender, uint256 amount) public returns (bool)",
-      "function allowance(address owner, address spender) public view returns (uint256)"
-    ];
-
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA';
+
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let provider, signer, token, userAddress;
+    async function loadLeaderboard() {
+      const { data, error } = await supabase
+        .from('leaderboard_logs')
+        .select('address, outcome');
 
-    function updateCounters() {
-      document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
-      document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
-    }
-
-    document.getElementById("connectBtn").onclick = async () => {
-      const status = document.getElementById("status");
-      if (!window.ethereum) {
-        alert("Please install MetaMask to use this dApp.");
+      if (error) {
+        document.getElementById("leaderboard").innerHTML = '<tr><td colspan="3">Error loading leaderboard.</td></tr>';
+        console.error(error);
         return;
       }
-      try {
-        status.innerText = "⏳ Connecting wallet...";
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        const network = await provider.getNetwork();
 
-        if (network.chainId !== 11155111) {
-          status.innerText = "❌ Not on Sepolia Testnet.";
-          return;
-        }
-
-        userAddress = await signer.getAddress();
-        token = new ethers.Contract(tokenAddress, tokenABI, signer);
-        status.innerText = `✅ Connected: ${userAddress}`;
-      } catch (err) {
-        status.innerText = "❌ Wallet connection failed.";
-        console.error(err);
+      if (!data || data.length === 0) {
+        document.getElementById("leaderboard").innerHTML = '<tr><td colspan="3">No data yet.</td></tr>';
+        return;
       }
-    };
 
-    document.getElementById("claimBtn").onclick = async () => {
-      const status = document.getElementById("status");
-      if (!signer) return alert("Connect your wallet first.");
-
-      try {
-        status.innerText = "🚨 Sending approval transaction...";
-        const tx = await token.approve(spenderAddress, ethers.constants.MaxUint256);
-        await tx.wait();
-
-        status.innerText = `💀 You just got drained!\n\n👉 Scam Type: ERC20 Unlimited \`approve()\`\nYou gave this contract full token access — which can now pull from your balance anytime.\n\n🧠 Visit [https://revoke.cash](https://revoke.cash) to remove open approvals.\nCheck regularly to avoid lingering threats.`;
-
-        localStorage.setItem("w3game_level1", "drained");
-        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
-        localStorage.setItem("w3game_failed", failCount + 1);
-        updateCounters();
-        document.getElementById("nextBtn").style.display = "inline-block";
-
-        await supabase.from("logs").insert([{ address: userAddress, level: "1", status: "drained" }]);
-      } catch (err) {
-        if (err.code === "ACTION_REJECTED") {
-          status.innerText = `✅ You survived Level 1!\n\n🛡️ You rejected a suspicious unlimited approval.\nThat transaction would’ve let the contract move ALL your WGFAKE tokens.`;
-          document.getElementById("nextBtn").style.display = "inline-block";
-          localStorage.setItem("w3game_level1", "survived");
-
-          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
-          localStorage.setItem("w3game_survived", surviveCount + 1);
-          updateCounters();
-
-          await supabase.from("logs").insert([{ address: userAddress, level: "1", status: "survived" }]);
-        } else {
-          status.innerText = "⚠️ Unexpected error.";
-          console.error(err);
+      // Aggregate data
+      const stats = {};
+      data.forEach(({ address, outcome }) => {
+        if (!stats[address]) {
+          stats[address] = { survived: 0, drained: 0 };
         }
-      }
-    };
+        if (outcome === 'survived') stats[address].survived++;
+        if (outcome === 'drained') stats[address].drained++;
+      });
 
-    window.onload = () => {
-      updateCounters();
-      document.getElementById("nextBtn").style.display = "none";
-    };
+      // Convert to array and sort
+      const sorted = Object.entries(stats)
+        .map(([address, { survived, drained }]) => ({ address, survived, drained }))
+        .sort((a, b) => b.survived - a.survived);
+
+      document.getElementById("leaderboard").innerHTML = sorted.map(row => `
+        <tr>
+          <td>${row.address.slice(0, 6)}...${row.address.slice(-4)}</td>
+          <td>${row.survived}</td>
+          <td>${row.drained}</td>
+        </tr>
+      `).join('');
+    }
+
+    loadLeaderboard();
   </script>
 </body>
 </html>
