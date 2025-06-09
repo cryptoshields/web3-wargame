@@ -93,7 +93,7 @@
       const { data, error } = await supabase
         .from('leaderboard_logs')
         .select('address, outcome')
-        .order('timestamp', { ascending: false });
+        .order('inserted_at', { ascending: false });
 
       const table = document.getElementById("leaderboard");
 
