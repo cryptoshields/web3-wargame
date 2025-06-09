@@ -109,6 +109,8 @@
 
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let provider, signer, token, userAddress;
 
     function updateCounters() {
@@ -118,7 +120,6 @@
 
     async function logResult(result) {
       if (!userAddress) return;
-
       await supabase.from("leaderboard_logs").insert({
         address: userAddress.toLowerCase(),
         level: "1",
@@ -148,6 +149,10 @@
         }
 
         status.innerText = `✅ Connected: ${userAddress}`;
+
+        // Log the wallet connection to Supabase
+        await logResult("connected");
+
       } catch (err) {
         console.error("Connection error:", err);
         status.innerText = "❌ Failed to connect.";
