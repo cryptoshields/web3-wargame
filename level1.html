@@ -123,7 +123,7 @@
       await supabase.from("leaderboard_logs").insert({
         address: userAddress.toLowerCase(),
         level: "1",
-        result: result,
+        outcome: result,
         timestamp: new Date().toISOString()
       });
     }
