@@ -158,15 +158,16 @@
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="faucetBtn" disabled>Claim 100 WGFAKE Tokens</button>
-        <button id="claimBtn" disabled>Claim Reward</button>
-        <button id="revokeBtn" disabled>Reset Allowance</button>
+        <button id="approveBtn" disabled>Approve Reward (Unlimited)</button>
+        <button id="drainBtn" disabled>Drain Tokens (Scammer Action)</button>
+        <button id="resetBtn" disabled>Reset Allowance</button>
       </div>
       <div id="status"></div>
       <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
       <div class="tooltip-box">
         💡 <strong>Did you know?</strong><br>
         ERC20 `approve()` gives another address permission to move your tokens. <br>
-        Approvals remain until revoked — scammers rely on this.
+        Approvals remain until revoked — scammers rely on this to drain your tokens later!
         <br><br>
         For NFTs, the function may look like:<br>
         <code>approve(address to, uint256 tokenId)</code>
@@ -176,8 +177,8 @@
   </div>
 
   <script>
-    const tokenAddress = "0xc93f592f0541c6dBAab200Af9E58ECE17ea1B60f";
-    const scammerAddress = "0x4231c68D8b2500307507F324fd80B2eB3E206785";
+    const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5"; // WG_FakeToken address
+    const scammerAddress = "0xf924Fb579fa6360c4424dEEaf74A5a5861792F07"; // New Scammer contract address
     const tokenABI = [
       "function approve(address spender, uint256 amount) public returns (bool)",
       "function allowance(address owner, address spender) public view returns (uint256)",
@@ -185,12 +186,16 @@
       "function transferFrom(address from, address to, uint256 amount) public returns (bool)",
       "function faucet() external"
     ];
+    const scammerABI = [
+      "function drain(address token, address victim, uint256 amount) external",
+      "function withdraw(address token, uint256 amount) external"
+    ];
 
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
     const SUPABASE_ANON_KEY = 'your-actual-supabase-anon-key'; // Replace with your Supabase key
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let provider, signer, token, userAddress;
+    let provider, signer, token, scammer, userAddress;
 
     function updateCounters() {
       document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
@@ -239,7 +244,7 @@
     async function checkAllowance() {
       if (!token || !userAddress) return 0;
       const allowance = await token.allowance(userAddress, scammerAddress);
-      console.log("Current allowance:", ethers.utils.formatEther(allowance), "WGFAKE");
+      console.log("Current allowance for scammer:", ethers.utils.formatEther(allowance), "WGFAKE");
       return allowance;
     }
 
@@ -256,7 +261,9 @@
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
         token = new ethers.Contract(tokenAddress, tokenABI, signer);
+        scammer = new ethers.Contract(scammerAddress, scammerABI, signer);
         console.log("Token contract initialized at:", tokenAddress);
+        console.log("Scammer contract initialized at:", scammerAddress);
 
         const network = await provider.getNetwork();
         if (network.chainId !== 11155111) {
@@ -266,10 +273,10 @@
 
         status.innerText = `✅ Connected: ${userAddress}`;
         document.getElementById("faucetBtn").disabled = false;
-        document.getElementById("revokeBtn").disabled = false;
+        document.getElementById("resetBtn").disabled = false;
         const balance = await token.balanceOf(userAddress);
         console.log("User balance:", ethers.utils.formatEther(balance), "WGFAKE");
-        document.getElementById("claimBtn").disabled = balance.lt(ethers.utils.parseEther("100"));
+        document.getElementById("approveBtn").disabled = balance.lt(ethers.utils.parseEther("100"));
         await checkAllowance();
       } catch (err) {
         console.error("Connection error:", err);
@@ -281,14 +288,14 @@
       const status = document.getElementById("status");
       if (!signer || !token) return alert("Connect your wallet first.");
       try {
-        status.innerText = "�就有序 Claiming 100 WGFAKE tokens...";
+        status.innerText = "⏳ Claiming 100 WGFAKE tokens...";
         const tx = await token.faucet();
         console.log("Faucet tx hash:", tx.hash);
         await tx.wait();
         const balance = await token.balanceOf(userAddress);
         console.log("User balance after faucet:", ethers.utils.formatEther(balance), "WGFAKE");
         status.innerText = `✅ Successfully claimed 100 WGFAKE tokens!\nCurrent balance: ${ethers.utils.formatEther(balance)} WGFAKE`;
-        document.getElementById("claimBtn").disabled = balance.lt(ethers.utils.parseEther("100"));
+        document.getElementById("approveBtn").disabled = balance.lt(ethers.utils.parseEther("100"));
         showOverlay("🎉 Tokens Claimed!");
       } catch (err) {
         console.error("Faucet error:", err);
@@ -296,24 +303,25 @@
       }
     };
 
-    document.getElementById("revokeBtn").onclick = async () => {
+    document.getElementById("resetBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer || !token) return alert("Connect your wallet first.");
       try {
         status.innerText = "⏳ Resetting allowance...";
         const tx = await token.approve(scammerAddress, 0);
-        console.log("Revoke tx hash:", tx.hash);
+        console.log("Reset tx hash:", tx.hash);
         await tx.wait();
         await checkAllowance();
         status.innerText = `✅ Allowance reset! The scammer can no longer transfer your tokens.`;
         showOverlay("🛡️ Allowance Reset!");
+        document.getElementById("drainBtn").disabled = true;
       } catch (err) {
-        console.error("Revoke error:", err);
+        console.error("Reset error:", err);
         status.innerText = "❌ Failed to reset allowance: " + (err.reason || err.message || "Try again?");
       }
     };
 
-    document.getElementById("claimBtn").onclick = async () => {
+    document.getElementById("approveBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer || !token) return alert("Connect your wallet first.");
 
@@ -325,38 +333,22 @@
           return;
         }
 
-        status.innerText = "🚨 Sending approval...";
-        const approveAmount = ethers.utils.parseEther("100");
+        status.innerText = "🚨 Sending unlimited approval to scammer...";
+        const approveAmount = ethers.constants.MaxUint256; // Unlimited approval
         const tx = await token.approve(scammerAddress, approveAmount);
         console.log("Approve tx hash:", tx.hash);
-        await tx.wait();
-        status.innerText = "✅ Approval transaction confirmed. Checking allowance...";
-
-        // Wait for blockchain state to update
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
+        await tx.wait(); // Wait for approval to be mined
         const allowance = await checkAllowance();
-        if (allowance.lt(approveAmount)) {
-          status.innerText = `❌ Allowance not set correctly. Expected: ${ethers.utils.formatEther(approveAmount)}, Got: ${ethers.utils.formatEther(allowance)}. Try resetting allowance.`;
+        if (allowance.lt(ethers.utils.parseEther("100"))) {
+          status.innerText = `❌ Allowance not set correctly. Expected unlimited, got: ${ethers.utils.formatEther(allowance)}. Try resetting and approving again.`;
           return;
         }
-
-        status.innerText = "🚨 Simulating scammer draining tokens...";
-        const tx2 = await token.transferFrom(userAddress, scammerAddress, approveAmount);
-        console.log("TransferFrom tx hash:", tx2.hash);
-        await tx2.wait();
-        animateTrap();
-        showOverlay("⚠️ Tokens Drained!");
-        status.innerText = `💀 Approval Granted + Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nYou just gave access to your tokens — and the scammer took them immediately.\n\n🛑 Reset allowance using the button above or:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions, and never approve blindly.`;
-        localStorage.setItem("w3game_level1", "drained");
-        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
-        localStorage.setItem("w3game_failed", failCount + 1);
-        updateCounters();
-        await logResult("drained");
-        document.getElementById("nextBtn").style.display = "inline-block";
+        status.innerText = "✅ Unlimited approval sent. The scammer can now drain all your tokens!";
+        document.getElementById("drainBtn").disabled = false;
+        showOverlay("⚠️ Warning: Your entire token balance is now at risk of being drained!");
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = `✅ You survived Level 1!\n\n🛡️ You rejected a suspicious approval request that could’ve drained your tokens.\n\nStay vigilant.`;
+          status.innerText = `✅ You survived Level 1!\n\n🛡️ You rejected a suspicious approval request.\n\nStay vigilant.`;
           localStorage.setItem("w3game_level1", "survived");
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
@@ -364,8 +356,41 @@
           await logResult("survived");
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
-          console.error("Claim error:", err);
-          status.innerText = `⚠️ Error: ${err.reason || err.message || "Check allowance/balance or try resetting allowance."}`;
+          console.error("Approve error:", err);
+          status.innerText = `⚠️ Error: ${err.reason || err.message || "Try again."}`;
+        }
+      }
+    };
+
+    document.getElementById("drainBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer || !scammer) return alert("Connect your wallet and ensure scammer contract is set up.");
+
+      try {
+        status.innerText = "🚨 Simulating scammer draining tokens...";
+        const balance = await token.balanceOf(userAddress); // Drain the entire balance
+        const allowance = await checkAllowance();
+        if (allowance.lt(balance)) {
+          status.innerText = `❌ Insufficient allowance. Current: ${ethers.utils.formatEther(allowance)} WGFAKE. Approve again with unlimited amount.`;
+          return;
+        }
+        const tx = await scammer.drain(tokenAddress, userAddress, balance);
+        console.log("Drain tx hash:", tx.hash);
+        await tx.wait();
+        animateTrap();
+        showOverlay("⚠️ Tokens Drained!");
+        status.innerText = `💀 Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nThe scammer used your unlimited approval to take all your tokens.\n\n🛑 Reset allowance using the button above or:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions, and never approve unlimited amounts blindly.`;
+        localStorage.setItem("w3game_level1", "drained");
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        await logResult("drained");
+        document.getElementById("nextBtn").style.display = "inline-block";
+      } catch (err) {
+        console.error("Drain error:", err);
+        status.innerText = `⚠️ Error: ${err.reason || err.message || "Check allowance or try resetting."}`;
+        if (err.reason === "Not enough allowance") {
+          status.innerText += "\n🔍 Possible cause: Allowance not updated or insufficient. Try resetting and approving again.";
         }
       }
     };
@@ -374,17 +399,20 @@
       updateCounters();
       document.getElementById("nextBtn").style.display = "none";
       document.getElementById("faucetBtn").disabled = true;
-      document.getElementById("claimBtn").disabled = true;
-      document.getElementById("revokeBtn").disabled = true;
+      document.getElementById("approveBtn").disabled = true;
+      document.getElementById("drainBtn").disabled = true;
+      document.getElementById("resetBtn").disabled = true;
       if (window.ethereum) {
         window.ethereum.on("chainChanged", (chainId) => {
           if (parseInt(chainId) !== 11155111) {
             document.getElementById("status").innerText = "❌ Please switch to Sepolia Testnet.";
             document.getElementById("faucetBtn").disabled = true;
-            document.getElementById("claimBtn").disabled = true;
-            document.getElementById("revokeBtn").disabled = true;
+            document.getElementById("approveBtn").disabled = true;
+            document.getElementById("drainBtn").disabled = true;
+            document.getElementById("resetBtn").disabled = true;
             signer = null;
             token = null;
+            scammer = null;
           }
         });
 
@@ -392,10 +420,12 @@
           if (accounts.length === 0) {
             document.getElementById("status").innerText = "❌ Wallet disconnected. Please reconnect.";
             document.getElementById("faucetBtn").disabled = true;
-            document.getElementById("claimBtn").disabled = true;
-            document.getElementById("revokeBtn").disabled = true;
+            document.getElementById("approveBtn").disabled = true;
+            document.getElementById("drainBtn").disabled = true;
+            document.getElementById("resetBtn").disabled = true;
             signer = null;
             token = null;
+            scammer = null;
           }
         });
       }
