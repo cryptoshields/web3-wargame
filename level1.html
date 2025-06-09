@@ -31,18 +31,30 @@
     }
     .frame-container {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      height: calc(100vh - 120px);
+      padding: 2rem;
+      gap: 2rem;
+      flex-wrap: wrap;
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
       border-radius: 12px;
       padding: 2rem;
       box-shadow: 0 0 18px #ff9800;
-      max-width: 540px;
+      max-width: 480px;
       width: 100%;
       text-align: center;
+    }
+    .info-box {
+      background: #222;
+      border: 1px solid #ff9800;
+      padding: 1.5rem;
+      border-radius: 10px;
+      max-width: 480px;
+      width: 100%;
+      font-size: 0.95rem;
+      line-height: 1.5;
     }
     .button-container {
       display: flex;
@@ -73,6 +85,7 @@
       color: #fff;
       text-decoration: none;
       margin-top: 2rem;
+      display: inline-block;
     }
   </style>
 </head>
@@ -97,6 +110,23 @@
       <div id="status"></div>
       <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
     </div>
+
+    <div class="info-box">
+      <h3>🔎 Understanding <code>approve()</code></h3>
+      <p>
+        When you approve a contract to spend your tokens using
+        <code>approve(spender, amount)</code>, you're giving it full permission
+        to transfer up to that amount without asking again.
+      </p>
+      <p>
+        This approval doesn't go away automatically. Even if you transfer the
+        tokens yourself, the contract can still access your wallet — unless you
+        revoke it manually.
+      </p>
+      <p>
+        🛑 <strong>Use</strong> <a href="https://revoke.cash" target="_blank" style="color: #ff9800;">revoke.cash</a> to remove unnecessary token approvals after interacting with unknown dApps.
+      </p>
+    </div>
   </div>
 
   <script>
@@ -108,7 +138,7 @@
     ];
 
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA';
+    const SUPABASE_ANON_KEY = 'your_anon_key_here'; // replace with your actual anon key
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let provider, signer, token, userAddress;
@@ -120,11 +150,12 @@
 
     async function logResult(result) {
       if (!userAddress) return;
+
       await supabase.from("leaderboard_logs").insert({
         address: userAddress.toLowerCase(),
         level: "1",
         outcome: result,
-        inserted_at: new Date().toISOString()
+        timestamp: new Date().toISOString()
       });
     }
 
@@ -149,10 +180,6 @@
         }
 
         status.innerText = `✅ Connected: ${userAddress}`;
-
-        // Log the wallet connection to Supabase
-        await logResult("connected");
-
       } catch (err) {
         console.error("Connection error:", err);
         status.innerText = "❌ Failed to connect.";
