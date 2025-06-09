@@ -68,7 +68,7 @@
 <body>
   <div class="container">
     <h1>🏆 Leaderboard</h1>
-    <p>See how players are surviving (or getting drained) on Sepolia testnet.</p>
+    <p>See how players are performing on the Sepolia testnet.</p>
     <table>
       <thead>
         <tr>
@@ -77,7 +77,9 @@
           <th>Drained</th>
         </tr>
       </thead>
-      <tbody id="leaderboard"></tbody>
+      <tbody id="leaderboard">
+        <tr><td colspan="3">Loading...</td></tr>
+      </tbody>
     </table>
     <a href="index.html" class="back">⬅️ Back to Home</a>
   </div>
@@ -85,47 +87,44 @@
   <script>
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bHNtdGZ6YXd5dm5vempjYmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMjkzMzUsImV4cCI6MjA2NDgwNTMzNX0.zmNXEyGaO0PTcaRscFmQ7qx1rFeHTOSeeJfehzoA_tA';
-
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function loadLeaderboard() {
       const { data, error } = await supabase
         .from('leaderboard_logs')
-        .select('address, outcome');
+        .select('address, result')
+        .order('timestamp', { ascending: false });
+
+      const table = document.getElementById("leaderboard");
 
       if (error) {
-        document.getElementById("leaderboard").innerHTML = '<tr><td colspan="3">Error loading leaderboard.</td></tr>';
         console.error(error);
+        table.innerHTML = '<tr><td colspan="3">Error loading leaderboard.</td></tr>';
         return;
       }
 
       if (!data || data.length === 0) {
-        document.getElementById("leaderboard").innerHTML = '<tr><td colspan="3">No data yet.</td></tr>';
+        table.innerHTML = '<tr><td colspan="3">No data yet.</td></tr>';
         return;
       }
 
-      // Aggregate data
-      const stats = {};
-      data.forEach(({ address, outcome }) => {
-        if (!stats[address]) {
-          stats[address] = { survived: 0, drained: 0 };
-        }
-        if (outcome === 'survived') stats[address].survived++;
-        if (outcome === 'drained') stats[address].drained++;
+      const summary = {};
+      data.forEach(entry => {
+        const addr = entry.address.toLowerCase();
+        if (!summary[addr]) summary[addr] = { survived: 0, drained: 0 };
+        if (entry.result === "survived") summary[addr].survived += 1;
+        if (entry.result === "drained") summary[addr].drained += 1;
       });
 
-      // Convert to array and sort
-      const sorted = Object.entries(stats)
-        .map(([address, { survived, drained }]) => ({ address, survived, drained }))
-        .sort((a, b) => b.survived - a.survived);
-
-      document.getElementById("leaderboard").innerHTML = sorted.map(row => `
+      const rows = Object.entries(summary).map(([address, stats]) => `
         <tr>
-          <td>${row.address.slice(0, 6)}...${row.address.slice(-4)}</td>
-          <td>${row.survived}</td>
-          <td>${row.drained}</td>
+          <td>${address.slice(0, 6)}...${address.slice(-4)}</td>
+          <td>${stats.survived}</td>
+          <td>${stats.drained}</td>
         </tr>
       `).join('');
+
+      table.innerHTML = rows;
     }
 
     loadLeaderboard();
