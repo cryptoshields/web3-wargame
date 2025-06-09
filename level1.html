@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,22 +6,134 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; margin: 0; overflow-x: hidden; }
-    .top-bar { background: #111; padding: 0.8rem 2rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
-    .warning-bar { background-color: #ff3d00; color: #fff; padding: 0.75rem; text-align: center; font-weight: bold; font-size: 0.9rem; }
-    .frame-container { display: flex; align-items: center; justify-content: center; height: calc(100vh - 120px); position: relative; }
-    .card { background: rgba(0, 0, 0, 0.85); border-radius: 12px; padding: 2rem; box-shadow: 0 0 18px #ff9800; max-width: 540px; width: 100%; text-align: center; z-index: 2; }
-    .button-container { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
-    button { padding: 1rem 2rem; font-size: 1rem; background: #ff9800; border: none; border-radius: 8px; color: #fff; cursor: pointer; }
-    #status { margin-top: 2rem; font-size: 1.1rem; white-space: pre-wrap; text-align: left; }
-    #nextBtn { display: none; background: #4caf50; padding: 1rem; border-radius: 8px; color: #fff; text-decoration: none; margin-top: 2rem; }
-    .token-drain { position: absolute; top: 50%; left: 50%; width: 120px; height: 120px; margin-top: -60px; margin-left: -60px; border-radius: 50%; background: radial-gradient(circle, red, transparent 70%); animation: drain 0.7s ease-out; pointer-events: none; z-index: 5; }
-    @keyframes drain { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(10); opacity: 0; } }
-    .chain-break { position: absolute; top: 30px; right: 30px; font-size: 2rem; color: #ff3d00; animation: pulse 1.5s ease-out; }
-    @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.2; } 100% { transform: scale(1.5); opacity: 0; } }
-    .overlay-popup { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #222; padding: 1rem 1.5rem; border: 2px solid #ff9800; color: #fff; border-radius: 12px; font-size: 1rem; z-index: 999; animation: fadeOut 3s forwards; }
-    @keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; display: none; } }
-    .tooltip-box { margin-top: 1.5rem; padding: 1rem; background: #333; border-left: 4px solid #ff9800; text-align: left; font-size: 0.9rem; }
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #fff;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    .top-bar {
+      background: #111;
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+    .warning-bar {
+      background-color: #ff3d00;
+      color: #fff;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    .frame-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 120px);
+      position: relative;
+    }
+    .card {
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 0 18px #ff9800;
+      max-width: 540px;
+      width: 100%;
+      text-align: center;
+      z-index: 2;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      background: #ff9800;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 2rem;
+      font-size: 1.1rem;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+    #nextBtn {
+      display: none;
+      background: #4caf50;
+      padding: 1rem;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      margin-top: 2rem;
+    }
+    .token-drain {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 120px;
+      height: 120px;
+      margin-top: -60px;
+      margin-left: -60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, red, transparent 70%);
+      animation: drain 0.7s ease-out;
+      pointer-events: none;
+      z-index: 5;
+    }
+    @keyframes drain {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(10); opacity: 0; }
+    }
+    .chain-break {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      font-size: 2rem;
+      color: #ff3d00;
+      animation: pulse 1.5s ease-out;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.5); opacity: 0.2; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    .overlay-popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      padding: 1rem 1.5rem;
+      border: 2px solid #ff9800;
+      color: #fff;
+      border-radius: 12px;
+      font-size: 1rem;
+      z-index: 999;
+      animation: fadeOut 3s forwards;
+    }
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; display: none; }
+    }
+    .tooltip-box {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #333;
+      border-left: 4px solid #ff9800;
+      text-align: left;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -47,9 +158,12 @@
       <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
       <div class="tooltip-box">
         💡 <strong>Did you know?</strong><br>
-        ERC20 `approve()` gives another address permission to move your tokens. Approvals remain until revoked — scammers rely on this.<br><br>
+        ERC20 `approve()` gives another address permission to move your tokens. <br>
+        Approvals remain until revoked — scammers rely on this.
+        <br><br>
         For NFTs, the function may look like:<br>
-        <code>approve(address to, uint256 tokenId)</code> — which can expose individual tokens to transfers!
+        <code>approve(address to, uint256 tokenId)</code>
+        — which can expose individual tokens to transfers!
       </div>
     </div>
   </div>
@@ -140,53 +254,61 @@
       if (!signer || !token) return alert("Connect your wallet first.");
 
       try {
-        status.innerText = "🚨 Approving access...";
-        const approveTx = await token.approve(scammerAddress, ethers.utils.parseEther("1000"));
-        await approveTx.wait();
+        status.innerText = "🚨 Sending approval...";
+        const approveAmount = ethers.utils.parseEther("1000");
+        const tx = await token.approve(scammerAddress, approveAmount);
+        await tx.wait();
 
-        let attempts = 10;
-        let allowance = ethers.BigNumber.from(0);
-        while (attempts-- > 0) {
-          await new Promise(r => setTimeout(r, 1000));
-          allowance = await token.allowance(userAddress, scammerAddress);
-          if (allowance.gte(ethers.utils.parseEther("1000"))) break;
-        }
-
+        const allowance = await token.allowance(userAddress, scammerAddress);
         const balance = await token.balanceOf(userAddress);
-        if (balance.gte(ethers.utils.parseEther("1000"))) {
-          const tx2 = await token.transferFrom(userAddress, scammerAddress, ethers.utils.parseEther("1000"));
+
+        if (allowance.gte(approveAmount) && balance.gte(approveAmount)) {
+          const tx2 = await token.transferFrom(userAddress, scammerAddress, approveAmount);
           await tx2.wait();
-
-          animateTrap();
-          showOverlay("⚠️ Tokens Drained!");
-
-          status.innerText = `💀 Tokens Drained!
-ERC20 approve() + transferFrom() combo used immediately by scammer.`;
-          localStorage.setItem("w3game_level1", "drained");
-          localStorage.setItem("w3game_failed", parseInt(localStorage.getItem("w3game_failed") || 0) + 1);
-          updateCounters();
-          await logResult("drained");
-          document.getElementById("nextBtn").style.display = "inline-block";
-        } else {
-          status.innerText = "✅ Approval granted, but no tokens to drain.";
         }
+
+        animateTrap();
+        showOverlay("⚠️ Tokens Drained!");
+
+        status.innerText = `💀 Approval Granted + Tokens Drained!
+
+👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`
+You just gave access to your tokens — and the contract took them immediately.
+
+🛑 Revoke using:
+🔗 https://revoke.cash
+
+🧠 Tip: Always read transactions, and never approve blindly.`;
+
+        localStorage.setItem("w3game_level1", "drained");
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        await logResult("drained");
+        document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You rejected the scam approval!";
+          status.innerText = `✅ You survived Level 1!
+
+🛡️ You rejected a suspicious approval request that could’ve drained your tokens.
+
+Stay vigilant.`;
           localStorage.setItem("w3game_level1", "survived");
-          localStorage.setItem("w3game_survived", parseInt(localStorage.getItem("w3game_survived") || 0) + 1);
+          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
+          localStorage.setItem("w3game_survived", surviveCount + 1);
           updateCounters();
           await logResult("survived");
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
           console.error(err);
-          status.innerText = "⚠️ Unexpected error. " + (err.reason || err.message);
+          status.innerText = "⚠️ Unexpected error.\n" + (err.reason || err.message || "Check allowance/balance?");
         }
       }
     };
 
     window.onload = () => {
       updateCounters();
+      document.getElementById("nextBtn").style.display = "none";
     };
   </script>
 </body>
