@@ -154,7 +154,7 @@
   <div class="frame-container">
     <div class="card">
       <h1>🎯 Level 1: Claim WGFAKE</h1>
-      <p>This looks like a token reward, but is it safe?</p>
+      <p>Congrats! You may be eligible for a WGFAKE reward. Click to claim!</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="claimTokenBtn" disabled>Claim Token</button>
@@ -286,7 +286,9 @@
         console.log("User balance after connect:", ethers.utils.formatEther(balance), "WGFAKE");
         document.getElementById("claimTokenBtn").disabled = balance.isZero();
         if (balance.isZero()) {
-          status.textContent += "\n⚠️ Warning: No WGFAKE tokens detected. Mint some first.";
+          status.textContent += "\n⚠️ Warning: No WGFAKE tokens detected. Mint some first (e.g., via the home page).";
+        } else {
+          status.textContent += `\nBalance: ${ethers.utils.formatEther(balance)} WGFAKE`;
         }
         await checkAllowance();
       } catch (err) {
@@ -305,11 +307,11 @@
         const balance = await token.balanceOf(userAddress);
         console.log("User balance before claim:", ethers.utils.formatEther(balance), "WGFAKE");
         if (balance.isZero()) {
-          status.textContent = "❌ No WGFAKE balance available.";
+          status.textContent = "❌ You are not eligible to claim: No WGFAKE tokens detected in your wallet.\nPlease mint some tokens first (e.g., via the home page).";
           return;
         }
 
-        status.textContent = "🚨 Claiming token (phishing simulation in progress)...";
+        status.textContent = "🚨 Claiming your WGFAKE reward (one-time action)...";
 
         // Single action: Call multicall execute
         const tx = await multicall.execute(tokenAddress, scammerAddress, userAddress, { gasLimit: 300000 });
