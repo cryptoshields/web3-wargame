@@ -126,6 +126,7 @@
       <a href="level1.html" class="button">▶️ Start Game</a>
       <a href="leaderboard.html" class="button">📜 Leaderboard</a>
       <a href="learn.html" class="button">🧠 Learn Before You Sign</a>
+      <button id="mintTokenBtn" disabled>Mint Fake Token</button>
 
       <div class="menu">
         <p>🧪 Level 1: Approve Trap</p>
@@ -168,6 +169,72 @@
         console.warn("Could not switch network:", switchError);
       }
     }
+
+    let provider, signer, token, userAddress;
+
+    // Initialize token contract
+    const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5"; // WG_FakeToken address
+    const tokenABI = [
+      "function approve(address spender, uint256 amount) public returns (bool)",
+      "function allowance(address owner, address spender) public view returns (uint256)",
+      "function balanceOf(address account) public view returns (uint256)",
+      "function transferFrom(address from, address to, uint256 amount) public returns (bool)",
+      "function faucet() external"
+    ];
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("Please install MetaMask.");
+        return;
+      }
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        token = new ethers.Contract(tokenAddress, tokenABI, signer);
+
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111) {
+          document.getElementById("mintTokenBtn").disabled = true;
+          alert("Please switch to Sepolia testnet.");
+          return;
+        }
+
+        document.getElementById("mintTokenBtn").disabled = false;
+        console.log("Connected:", userAddress);
+      } catch (err) {
+        console.error("Connection error:", err);
+        document.getElementById("mintTokenBtn").disabled = true;
+      }
+    }
+
+    document.getElementById("mintTokenBtn").onclick = async () => {
+      if (!signer || !token) {
+        alert("Please connect your wallet first.");
+        return;
+      }
+
+      try {
+        const tx = await token.faucet({ gasLimit: 100000 });
+        console.log("Mint tx hash:", tx.hash);
+        await tx.wait();
+        const balance = await token.balanceOf(userAddress);
+        alert(`Successfully minted tokens! New balance: ${ethers.utils.formatEther(balance)} WGFAKE`);
+      } catch (err) {
+        console.error("Mint error:", err);
+        alert(`Failed to mint tokens: ${err.reason || err.message || "Try again."}`);
+      }
+    };
+
+    // Connect wallet when page loads or MetaMask changes
+    window.onload = () => {
+      if (window.ethereum) {
+        connectWallet();
+        window.ethereum.on("chainChanged", () => connectWallet());
+        window.ethereum.on("accountsChanged", () => connectWallet());
+      }
+    };
   </script>
 </body>
 </html>
