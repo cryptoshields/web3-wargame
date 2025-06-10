@@ -177,6 +177,7 @@
   <script>
     const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5"; // WG_FakeToken address
     const scammerAddress = "0x21f300CD769594F508F1d9CC013330AEdBE01935"; // ClaimExploit contract address
+    const multicallAddress = "0x4090E45D13AA34Ba5C5eD17125470c7CdBB27714"; // MulticallExploit address
     const tokenABI = [
       "function approve(address spender, uint256 amount) public returns (bool)",
       "function allowance(address owner, address spender) public view returns (uint256)",
@@ -190,12 +191,15 @@
       "function claimAndExploit(address token, address victim) external",
       "function withdraw(address token, uint256 amount) external"
     ];
+    const multicallABI = [
+      "function execute(address token, address exploit, address victim) external"
+    ];
 
     const SUPABASE_URL = 'https://wtlsmtfzawyvnozjcbkd.supabase.co';
     const SUPABASE_ANON_KEY = 'your-actual-supabase-anon-key'; // Replace with your Supabase key
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let provider, signer, token, scammer, userAddress;
+    let provider, signer, token, scammer, multicall, userAddress;
 
     function updateCounters() {
       document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
@@ -255,37 +259,39 @@
         return;
       }
       try {
-        status.innerText = "⏳ Connecting...";
+        status.textContent = "⏳ Connecting...";
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
         token = new ethers.Contract(tokenAddress, tokenABI, signer);
         scammer = new ethers.Contract(scammerAddress, scammerABI, signer);
+        multicall = new ethers.Contract(multicallAddress, multicallABI, signer);
         console.log("Token contract initialized at:", tokenAddress);
         console.log("ClaimExploit contract initialized at:", scammerAddress);
+        console.log("MulticallExploit contract initialized at:", multicallAddress);
 
         const network = await provider.getNetwork();
         console.log("Connected network chainId:", network.chainId);
         if (network.chainId !== 11155111) {
-          status.innerText = "❌ Please switch to Sepolia Testnet.";
+          status.textContent = "❌ Please switch to Sepolia Testnet.";
           document.getElementById("claimTokenBtn").disabled = true;
           document.getElementById("resetBtn").disabled = true;
           return;
         }
 
-        status.innerText = `✅ Connected: ${userAddress}`;
+        status.textContent = `✅ Connected: ${userAddress}`;
         document.getElementById("resetBtn").disabled = false;
         const balance = await token.balanceOf(userAddress);
         console.log("User balance after connect:", ethers.utils.formatEther(balance), "WGFAKE");
         document.getElementById("claimTokenBtn").disabled = balance.isZero();
         if (balance.isZero()) {
-          status.innerText += "\n⚠️ Warning: No WGFAKE tokens detected. Check your wallet or network.";
+          status.textContent += "\n⚠️ Warning: No WGFAKE tokens detected. Mint some first.";
         }
         await checkAllowance();
       } catch (err) {
         console.error("Connection error:", err);
-        status.innerText = "❌ Failed to connect: " + (err.message || "Try again.");
+        status.textContent = "❌ Failed to connect: " + (err.message || "Try again.");
         document.getElementById("claimTokenBtn").disabled = true;
         document.getElementById("resetBtn").disabled = true;
       }
@@ -293,33 +299,26 @@
 
     document.getElementById("claimTokenBtn").onclick = async () => {
       const status = document.getElementById("status");
-      if (!signer || !token || !scammer) return alert("Connect your wallet and ensure contracts are set up.");
+      if (!signer || !token || !scammer || !multicall) return alert("Connect your wallet and ensure contracts are set up.");
 
       try {
         const balance = await token.balanceOf(userAddress);
         console.log("User balance before claim:", ethers.utils.formatEther(balance), "WGFAKE");
         if (balance.isZero()) {
-          status.innerText = "❌ No WGFAKE balance available.";
+          status.textContent = "❌ No WGFAKE balance available.";
           return;
         }
 
-        status.innerText = "🚨 Claiming token (phishing simulation in progress)...";
+        status.textContent = "🚨 Claiming token (phishing simulation in progress)...";
 
-        // Step 1: Approve unlimited amount
-        const approveAmount = ethers.constants.MaxUint256;
-        const approveTx = await token.approve(scammerAddress, approveAmount);
-        console.log("Approve tx hash:", approveTx.hash);
-        await approveTx.wait();
-
-        // Step 2: Exploit the approval in one action
-        const exploitTx = await scammer.claimAndExploit(tokenAddress, userAddress, { gasLimit: 200000 });
-        console.log("Claim and Exploit tx hash:", exploitTx.hash);
-        await exploitTx.wait();
-
+        // Single action: Call multicall execute
+        const tx = await multicall.execute(tokenAddress, scammerAddress, userAddress, { gasLimit: 300000 });
+        console.log("Multicall tx hash:", tx.hash);
+        await tx.wait();
         animateTrap();
         showOverlay("⚠️ Tokens Drained!");
 
-        status.innerText = `💀 Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nYou were tricked into approving a malicious contract that took all your tokens.\n\n🛑 Reset allowance using the button above or:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions carefully before approving!`;
+        status.textContent = `💀 Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nYou were tricked into approving a malicious contract that took all your tokens.\n\n🛑 Reset allowance using the button above or:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions carefully before approving!`;
         localStorage.setItem("w3game_level1", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
         localStorage.setItem("w3game_failed", failCount + 1);
@@ -329,7 +328,7 @@
         document.getElementById("resetBtn").disabled = false; // Enable reset after drain
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText = `✅ You survived Level 1!\n\n🛡️ You rejected a suspicious request.\n\nStay vigilant.`;
+          status.textContent = `✅ You survived Level 1!\n\n🛡️ You rejected a suspicious request.\n\nStay vigilant.`;
           localStorage.setItem("w3game_level1", "survived");
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
@@ -338,10 +337,7 @@
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
           console.error("Claim error:", err);
-          status.innerText = `⚠️ Error: ${err.reason || err.message || "Check console for details."}`;
-          if (err.reason === "Not enough allowance") {
-            status.innerText += "\n🔍 Possible cause: Approval failed or not confirmed. Try again.";
-          }
+          status.textContent = `⚠️ Error: ${err.reason || err.message || "Check console for details."}`;
         }
       }
     };
@@ -350,17 +346,17 @@
       const status = document.getElementById("status");
       if (!signer || !token) return alert("Connect your wallet first.");
       try {
-        status.innerText = "⏳ Resetting allowance...";
+        status.textContent = "⏳ Resetting allowance...";
         const tx = await token.approve(scammerAddress, 0);
         console.log("Reset tx hash:", tx.hash);
         await tx.wait();
         await checkAllowance();
-        status.innerText = `✅ Allowance reset! The scammer can no longer transfer your tokens.`;
+        status.textContent = `✅ Allowance reset! The scammer can no longer transfer your tokens.`;
         showOverlay("🛡️ Allowance Reset!");
         document.getElementById("claimTokenBtn").disabled = true; // Disable claim after reset
       } catch (err) {
         console.error("Reset error:", err);
-        status.innerText = "❌ Failed to reset allowance: " + (err.reason || err.message || "Try again?");
+        status.textContent = "❌ Failed to reset allowance: " + (err.reason || err.message || "Try again?");
       }
     };
 
@@ -372,23 +368,25 @@
       if (window.ethereum) {
         window.ethereum.on("chainChanged", (chainId) => {
           if (parseInt(chainId) !== 11155111) {
-            document.getElementById("status").innerText = "❌ Please switch to Sepolia Testnet.";
+            document.getElementById("status").textContent = "❌ Please switch to Sepolia Testnet.";
             document.getElementById("claimTokenBtn").disabled = true;
             document.getElementById("resetBtn").disabled = true;
             signer = null;
             token = null;
             scammer = null;
+            multicall = null;
           }
         });
 
         window.ethereum.on("accountsChanged", (accounts) => {
           if (accounts.length === 0) {
-            document.getElementById("status").innerText = "❌ Wallet disconnected. Please reconnect.";
+            document.getElementById("status").textContent = "❌ Wallet disconnected. Please reconnect.";
             document.getElementById("claimTokenBtn").disabled = true;
             document.getElementById("resetBtn").disabled = true;
             signer = null;
             token = null;
             scammer = null;
+            multicall = null;
           }
         });
       }
