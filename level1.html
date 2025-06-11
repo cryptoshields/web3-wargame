@@ -330,6 +330,7 @@
     function updateModeDisplay() {
       console.log("Updating mode display, currentMode:", currentMode); // Debug log
       const modeToggle = document.getElementById('modeToggle');
+      console.log("Toggle checked:", modeToggle.checked); // Debug toggle state
       if (modeToggle.checked) {
         currentMode = 'transaction';
         document.querySelector('.mode-buttons').style.display = 'none';
@@ -345,7 +346,10 @@
       }
     }
 
-    document.getElementById('modeToggle').addEventListener('change', updateModeDisplay);
+    document.getElementById('modeToggle').addEventListener('change', () => {
+      console.log("Toggle changed event fired"); // Debug event
+      updateModeDisplay();
+    });
 
     // Connect Wallet (shared logic for both modes)
     [document.getElementById('connectBtn'), document.getElementById('connectBtnTrans')].forEach(btn => {
