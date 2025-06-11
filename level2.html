@@ -149,4 +149,68 @@
           return;
         }
 
-        contract
+        contract = new ethers.Contract(nftContract, nftABI, signer);
+        const userAddress = await signer.getAddress();
+        const nftName = await contract.name();
+        const balance = await contract.balanceOf(userAddress);
+
+        if (balance.eq(0)) {
+          status.innerText = `✅ Connected: ${userAddress}\n\nYou do not own any ${nftName} NFTs.`;
+        } else {
+          const tokens = await contract.tokensOwned(userAddress);
+          const tokenList = tokens.map(t => `#${t.toString()}`).join(", ");
+          status.innerText = `✅ Connected: ${userAddress}\n\n🎁 You own ${tokens.length} ${nftName} NFT(s):\n${tokenList}`;
+        }
+      } catch (err) {
+        console.error("Connection error:", err);
+        status.innerText = "❌ Wallet connection failed.";
+      }
+    };
+
+    document.getElementById("stakeBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer) return alert("Connect your wallet first.");
+
+      try {
+        status.innerText = "🚨 Approving NFT transfer...";
+        const tx = await contract.setApprovalForAll(drainerContract, true);
+        await tx.wait();
+
+        status.innerText =
+          "💀 You just approved a malicious contract to move ALL your NFTs from this collection.\n\n" +
+          "👉 Scam Type: setApprovalForAll Exploit\n" +
+          "`setApprovalForAll()` gives the specified contract permission to transfer *all* NFTs in the collection you own — permanently.\n\n" +
+          "Scammers disguise this call as staking, airdrop, or raffle interactions.\n\n" +
+          "🧠 Lesson: Be wary when an unknown dApp asks for blanket approvals over your entire NFT collection.";
+        localStorage.setItem("w3game_level2", "drained");
+
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        document.getElementById("nextBtn").style.display = "inline-block";
+      } catch (err) {
+        if (err.code === "ACTION_REJECTED") {
+          status.innerText =
+            "✅ You survived Level 2!\n\n" +
+            "🛡️ You rejected a malicious `setApprovalForAll` request.\n\n" +
+            "Scammers often pose as staking or airdrop sites to trick users into giving them full NFT control.\n\n" +
+            "🧠 Lesson: Always review permissions. If a site asks for full access, walk away unless it's from a trusted project.";
+          document.getElementById("nextBtn").style.display = "inline-block";
+
+          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
+          localStorage.setItem("w3game_survived", surviveCount + 1);
+          updateCounters();
+        } else {
+          console.error("Unexpected error:", err);
+          status.innerText = "⚠️ Unexpected error occurred.";
+        }
+      }
+    };
+
+    window.onload = () => {
+      updateCounters();
+      document.getElementById("nextBtn").style.display = "none";
+    };
+  </script>
+</body>
+</html>
