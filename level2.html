@@ -73,6 +73,14 @@
       text-decoration: none;
       margin-top: 2rem;
     }
+    .tooltip-box {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #333;
+      border-left: 4px solid #ff9800;
+      text-align: left;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -95,22 +103,25 @@
       </div>
       <div id="status"></div>
       <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
-      
-      <div class="tooltip-box" style="margin-top: 2rem; background: #333; border-left: 4px solid #ff9800; padding: 1rem; text-align: left;">
+      <div class="tooltip-box">
         💡 <strong>Did you know?</strong><br>
-        The function <code>setApprovalForAll(operator, true)</code> allows the specified address to transfer <u>every NFT</u> you own from this collection — permanently.<br><br>
-        Scammers often disguise this as a staking, raffle, or mint interaction.<br><br>
-        ✅ Only use <code>setApprovalForAll</code> with contracts from trusted marketplaces like OpenSea or Blur.<br>
-        ❌ Never approve unknown dApps unless you’re sure they won’t abuse your entire collection.
+        ERC721 `setApprovalForAll()` grants full permission to transfer all your NFTs from a specific collection.<br>
+        This function is abused in scams disguised as staking, airdrops, or raffles.<br><br>
+        A safer method is `approve(address to, uint256 tokenId)` — it limits transfer rights to a single NFT.<br><br>
+        ⚠️ Always verify what contract you’re approving!
       </div>
-
     </div>
   </div>
 
   <script>
     const nftContract = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
     const drainerContract = "0x8d7283F4449EDF62FA2ec7D88bDFa8eD7C96d334";
-    const nftABI = ["function setApprovalForAll(address operator, bool approved) public"];
+    const nftABI = [
+      "function setApprovalForAll(address operator, bool approved) public",
+      "function balanceOf(address owner) public view returns (uint256)",
+      "function tokenOfOwnerByIndex(address owner, uint256 index) public view returns (uint256)",
+      "function name() public view returns (string)"
+    ];
 
     let provider, signer, contract;
 
@@ -125,19 +136,34 @@
         alert("Please install MetaMask to use this dApp.");
         return;
       }
+
       try {
         status.innerText = "⏳ Connecting wallet...";
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         const network = await provider.getNetwork();
+
         if (network.chainId !== 11155111) {
           status.innerText = "❌ You are not on Sepolia Testnet.\nPlease switch your MetaMask network.";
           return;
         }
+
         contract = new ethers.Contract(nftContract, nftABI, signer);
         const userAddress = await signer.getAddress();
-        status.innerText = `✅ Connected: ${userAddress}`;
+        const nftName = await contract.name();
+        const balance = await contract.balanceOf(userAddress);
+
+        if (balance.eq(0)) {
+          status.innerText = `✅ Connected: ${userAddress}\n\nYou do not own any ${nftName} NFTs.`;
+        } else {
+          let tokens = [];
+          for (let i = 0; i < balance.toNumber(); i++) {
+            const tokenId = await contract.tokenOfOwnerByIndex(userAddress, i);
+            tokens.push(`#${tokenId}`);
+          }
+          status.innerText = `✅ Connected: ${userAddress}\n\n🎁 You own ${balance} ${nftName} NFT(s):\n${tokens.join(", ")}`;
+        }
       } catch (err) {
         console.error("Connection error:", err);
         status.innerText = "❌ Wallet connection failed.";
