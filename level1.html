@@ -328,6 +328,7 @@
     }
 
     function updateModeDisplay() {
+      console.log("Updating mode display, currentMode:", currentMode); // Debug log
       const modeToggle = document.getElementById('modeToggle');
       if (modeToggle.checked) {
         currentMode = 'transaction';
@@ -514,7 +515,8 @@
       document.getElementById("approveTokenBtn").disabled = true;
       document.getElementById("drainTokenBtn").disabled = true;
       document.getElementById("resetAllowanceBtn").disabled = true;
-      document.querySelector('.mode-buttons').style.display = 'flex'; // Default to Drain Simulation
+      updateModeDisplay(); // Ensure default mode is applied on load
+      console.log("Initial mode set to:", currentMode); // Debug log
       if (window.ethereum) {
         window.ethereum.on("chainChanged", (chainId) => {
           if (parseInt(chainId) !== 11155111) {
