@@ -317,6 +317,12 @@
           status.textContent += "\n⚠️ Warning: No WGFAKE tokens detected. Mint some first (e.g., via the home page).";
         } else {
           status.textContent += `\nBalance: ${ethers.utils.formatEther(balance)} WGFAKE`;
+          //Enable the Buttons
+          document.getElementById('claimTokenBtn').disabled = true;
+          document.getElementById('claimStepBtn').disabled = false;
+          document.getElementById('approveStepBtn').disabled = false;
+          document.getElementById('transferStepBtn').disabled = false;
+          document.getElementById('revokeStepBtn').disabled = false;
         }
         document.getElementById('claimTokenBtn').disabled = balance.isZero();
         document.getElementById('claimStepBtn').disabled = balance.isZero();
