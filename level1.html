@@ -142,63 +142,24 @@
       text-align: left;
       font-size: 0.9rem;
     }
-    /* Switch Style Toggle */
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 60px;
-      height: 34px;
-      margin: 1rem 0;
-    }
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      -webkit-transition: .4s;
-      transition: .4s;
-      border-radius: 34px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 26px;
-      width: 26px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      -webkit-transition: .4s;
-      transition: .4s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: #4caf50;
-    }
-    input:focus + .slider {
-      box-shadow: 0 0 1px #4caf50;
-    }
-    input:checked + .slider:before {
-      -webkit-transform: translateX(26px);
-      -ms-transform: translateX(26px);
-      transform: translateX(26px);
-    }
     .mode-label {
       display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-      color: #ccc;
-      margin-bottom: 0.5rem;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
     }
-    .mode-label span {
-      padding: 0 0.5rem;
+    .mode-label input[type="radio"] {
+      display: none; /* Hide default radio button */
+    }
+    .mode-label label {
+      padding: 0.5rem 1rem;
+      background: #444;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .mode-label input[type="radio"]:checked + label {
+      background: #4caf50; /* Green when selected */
     }
   </style>
 </head>
@@ -217,13 +178,11 @@
       <h1>🎯 Level 1: Claim WGFAKE</h1>
       <p>Congrats! You may be eligible for a WGFAKE reward. Click to claim!</p>
       <div class="mode-label">
-        <span>Drain Simulation</span>
-        <span>Transaction Simulation</span>
+        <input type="radio" id="drainMode" name="mode" value="drain" checked>
+        <label for="drainMode">Drain Simulation</label>
+        <input type="radio" id="transactionMode" name="mode" value="transaction">
+        <label for="transactionMode">Transaction Simulation</label>
       </div>
-      <label class="switch">
-        <input type="checkbox" id="modeToggle">
-        <span class="slider"></span>
-      </label>
       <div class="mode-buttons button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="claimTokenBtn" disabled>Claim Token</button>
@@ -332,26 +291,27 @@
 
     function updateModeDisplay() {
       console.log("Updating mode display, currentMode:", currentMode); // Debug log
-      const modeToggle = document.getElementById('modeToggle');
-      console.log("Toggle checked:", modeToggle.checked); // Debug toggle state
-      if (modeToggle.checked) {
-        currentMode = 'transaction';
+      if (currentMode === 'drain') {
+        document.querySelector('.mode-buttons').style.display = 'flex';
+        document.querySelector('.transaction-buttons').style.display = 'none';
+        document.getElementById('claimTokenBtn').disabled = !signer || (await token.balanceOf(userAddress)).isZero();
+      } else {
         document.querySelector('.mode-buttons').style.display = 'none';
         document.querySelector('.transaction-buttons').style.display = 'flex';
         document.getElementById('approveTokenBtn').disabled = !signer || (await token.balanceOf(userAddress)).isZero();
         document.getElementById('drainTokenBtn').disabled = !signer || (await checkAllowance()).isZero();
         document.getElementById('resetAllowanceBtn').disabled = !signer;
-      } else {
-        currentMode = 'drain';
-        document.querySelector('.mode-buttons').style.display = 'flex';
-        document.querySelector('.transaction-buttons').style.display = 'none';
-        document.getElementById('claimTokenBtn').disabled = !signer || (await token.balanceOf(userAddress)).isZero();
       }
     }
 
-    document.getElementById('modeToggle').addEventListener('change', () => {
-      console.log("Toggle changed event fired"); // Debug event
-      updateModeDisplay();
+    // Handle radio button change
+    document.querySelectorAll('input[name="mode"]').forEach((radio) => {
+      radio.addEventListener('change', (event) => {
+        console.log("Mode changed to:", event.target.value); // "Do something" - log the change
+        currentMode = event.target.value;
+        updateModeDisplay();
+        document.getElementById('status').textContent += `\n🔄 Mode switched to: ${currentMode}`; // Example action
+      });
     });
 
     // Connect Wallet (shared logic for both modes)
