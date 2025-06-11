@@ -4,158 +4,162 @@
   <meta charset="UTF-8" />
   <title>Level 1 — ERC20 Approval Trap</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: #0d1117;
-      color: #f1f1f1;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #fff;
       margin: 0;
-    }
-    .top-bar, .warning-bar {
-      padding: 1rem;
-      text-align: center;
-      font-weight: bold;
+      overflow-x: hidden;
     }
     .top-bar {
-      background: #161b22;
+      background: #111;
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
     }
     .warning-bar {
-      background: #d32f2f;
+      background-color: #ff3d00;
       color: #fff;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
     }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      padding: 2rem;
-    }
-    .toggle-group {
+    .frame-container {
       display: flex;
+      align-items: center;
       justify-content: center;
-      gap: 1rem;
-      margin-bottom: 1rem;
+      height: calc(100vh - 120px);
+      position: relative;
     }
-    .button-group {
-      display: none;
-      flex-direction: column;
+    .card {
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 0 18px #ff9800;
+      max-width: 540px;
+      width: 100%;
+      text-align: center;
+      z-index: 2;
+    }
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 1rem;
       margin-top: 1rem;
     }
-    .button-group.active {
-      display: flex;
+    .mode-buttons, .transaction-buttons {
+      display: none;
     }
     button {
+      padding: 1rem 2rem;
+      font-size: 1rem;
       background: #ff9800;
       border: none;
-      border-radius: 6px;
-      padding: 1rem;
+      border-radius: 8px;
       color: #fff;
-      font-size: 1rem;
       cursor: pointer;
     }
-    .tooltip {
-      background: #1e293b;
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    #status {
       margin-top: 2rem;
+      font-size: 1.1rem;
+      white-space: pre-wrap;
+      text-align: left;
+    }
+    #nextBtn {
+      display: none;
+      background: #4caf50;
       padding: 1rem;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      margin-top: 2rem;
+    }
+    .tooltip-box {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #333;
       border-left: 4px solid #ff9800;
+      text-align: left;
       font-size: 0.9rem;
+    }
+    .mode-label {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .mode-label input[type="radio"] {
+      display: none;
+    }
+    .mode-label label {
+      padding: 0.5rem 1rem;
+      background: #444;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .mode-label input[type="radio"]:checked + label {
+      background: #4caf50;
     }
   </style>
 </head>
 <body>
-  <div class="top-bar">🎯 Approve & Pray — Level 1</div>
-  <div class="warning-bar">⚠️ Simulation Only — Use Sepolia Testnet + Burner Wallet</div>
-
-  <div class="container">
-    <div class="toggle-group">
-      <button id="mode1Btn">🧪 Drain Simulation</button>
-      <button id="mode2Btn">🔬 Step-by-Step</button>
-    </div>
-
-    <div id="mode1" class="button-group active">
-      <button id="connect1">Connect Wallet</button>
-      <button id="claimToken">Claim Token</button>
-    </div>
-
-    <div id="mode2" class="button-group">
-      <button id="connect2">Connect Wallet</button>
-      <button id="approveBtn">Approve Token</button>
-      <button id="drainBtn">TransferFrom</button>
-      <button id="resetBtn">Reset Allowance</button>
-    </div>
-
-    <div id="status" style="margin-top:2rem;font-size:0.95rem;white-space:pre-wrap;"></div>
-
-    <div class="tooltip">
-      💡 <strong>What is <code>approve()</code>?</strong><br>
-      The <code>approve()</code> function lets another smart contract (like Uniswap or a staking site) spend your tokens.<br>
-      Phishing contracts abuse this by getting you to approve **them** instead—and then draining you anytime using <code>transferFrom()</code>.
-    </div>
+  <div class="top-bar">
+    <div>Approve & Pray</div>
+    <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
   </div>
 
-  <script>
-    const mode1 = document.getElementById("mode1");
-    const mode2 = document.getElementById("mode2");
-    const status = document.getElementById("status");
+  <div class="warning-bar">
+    ⚠️ This is a testnet simulation. Use a burner wallet with Sepolia ETH only. Never connect a real wallet.
+  </div>
 
-    document.getElementById("mode1Btn").onclick = () => {
-      mode1.classList.add("active");
-      mode2.classList.remove("active");
-      status.textContent = "Mode: Drain Simulation";
-    };
-    document.getElementById("mode2Btn").onclick = () => {
-      mode1.classList.remove("active");
-      mode2.classList.add("active");
-      status.textContent = "Mode: Step-by-Step";
-    };
+  <div class="frame-container">
+    <div class="card">
+      <h1>🎯 Level 1: Claim WGFAKE</h1>
+      <p>Congrats! You may be eligible for a WGFAKE reward. Click to claim!</p>
 
-    let provider, signer, user, token, scammer;
-    const tokenAddress = "0xYourToken"; // replace
-    const scammerAddress = "0xScammer"; // replace
-    const tokenABI = [
-      "function approve(address,uint256) public returns (bool)",
-      "function transferFrom(address,address,uint256) public returns (bool)",
-      "function balanceOf(address) public view returns (uint256)"
-    ];
+      <div class="mode-label">
+        <input type="radio" id="drainMode" name="mode" value="drain" checked>
+        <label for="drainMode">Drain Simulation</label>
+        <input type="radio" id="transactionMode" name="mode" value="transaction">
+        <label for="transactionMode">Transaction Simulation</label>
+      </div>
 
-    async function connect() {
-      if (!window.ethereum) return alert("Please install MetaMask.");
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      user = await signer.getAddress();
-      token = new ethers.Contract(tokenAddress, tokenABI, signer);
-      status.textContent += `\n✅ Connected: ${user}`;
-    }
+      <div class="mode-buttons button-container">
+        <button id="connectBtn">Connect Wallet</button>
+        <button id="claimTokenBtn" disabled>Claim Token</button>
+      </div>
 
-    document.getElementById("connect1").onclick = connect;
-    document.getElementById("connect2").onclick = connect;
+      <div class="transaction-buttons button-container">
+        <button id="connectBtnTrans">Connect Wallet</button>
+        <button id="approveTokenBtn" disabled>Approve Token (Claim)</button>
+        <button id="drainTokenBtn" disabled>Drain Token (TransferFrom)</button>
+        <button id="resetAllowanceBtn" disabled>Reset Allowance</button>
+      </div>
 
-    document.getElementById("claimToken").onclick = async () => {
-      status.textContent = "🚨 Claiming... (approve + transferFrom)";
-      const tx1 = await token.approve(scammerAddress, ethers.constants.MaxUint256);
-      await tx1.wait();
-      const tx2 = await token.transferFrom(user, scammerAddress, ethers.utils.parseEther("100"));
-      await tx2.wait();
-      status.textContent += `\n💀 Token drained in 1 click!`;
-    };
+      <div id="status"></div>
+      <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
 
-    document.getElementById("approveBtn").onclick = async () => {
-      const tx = await token.approve(scammerAddress, ethers.constants.MaxUint256);
-      await tx.wait();
-      status.textContent += `\n✅ Token approved`;
-    };
-
-    document.getElementById("drainBtn").onclick = async () => {
-      const tx = await token.transferFrom(user, scammerAddress, ethers.utils.parseEther("100"));
-      await tx.wait();
-      status.textContent += `\n💀 transferFrom drained tokens`;
-    };
-
-    document.getElementById("resetBtn").onclick = async () => {
-      const tx = await token.approve(scammerAddress, 0);
-      await tx.wait();
-      status.textContent += `\n🛡️ Allowance reset to 0`;
-    };
-  </script>
+      <div class="tooltip-box">
+        💡 <strong>Did you know?</strong><br>
+        ERC20 <code>approve()</code> gives another address permission to move your tokens.<br>
+        Approvals remain active until revoked — scammers rely on this to drain your funds later!<br><br>
+        For NFTs, the function may look like:<br>
+        <code>approve(address to, uint256 tokenId)</code>
+        — exposing specific NFTs to potential theft!
+      </div>
+    </div>
+  </div>
 </body>
 </html>
