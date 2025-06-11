@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Approve & Pray — Web3 War Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script> <!-- Added ethers library -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -72,6 +72,12 @@
       text-decoration: none;
       margin: 0.5rem;
     }
+    .mint-buttons {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
     .menu {
       margin: 2rem 0;
       text-align: left;
@@ -98,7 +104,6 @@
       padding: 0.6rem 1rem;
       border-radius: 6px;
       cursor: pointer;
-      margin-top: 0.5rem;
     }
     @media (max-width: 768px) {
       #main-content {
@@ -124,11 +129,20 @@
       <div class="logo">🛡️ Approve & Pray</div>
       <div class="tagline">A game of scams, signatures, and survival.</div>
 
-      <a href="level1.html" class="button">▶️ Start Game</a>
-      <a href="leaderboard.html" class="button">📜 Leaderboard</a>
-      <a href="learn.html" class="button">🧠 Learn Before You Sign</a>
-      <button id="mintTokenBtn" disabled>Mint Fake Token</button>
+      <!-- Action buttons -->
+      <div>
+        <a href="level1.html" class="button">▶️ Start Game</a>
+        <a href="learn.html" class="button">🧠 Learn Before You Sign</a>
+      </div>
 
+      <hr style="margin: 2rem 0; border: 1px solid #333;" />
+
+      <div class="mint-buttons">
+        <button id="mintTokenBtn" disabled>Mint Fake Token</button>
+        <button id="mintNftBtn" disabled>Mint Fake NFT</button>
+      </div>
+
+      <!-- Game Levels -->
       <div class="menu">
         <p>🧪 Level 1: Approve Trap</p>
         <p>🎭 Level 2: setApprovalForAll</p>
@@ -137,6 +151,7 @@
         <p>🎲 Level 5: ???</p>
       </div>
 
+      <!-- Info -->
       <div class="meta-section">
         <h3>🚧 Testnet Only</h3>
         <p>This game runs on the <strong>Sepolia testnet</strong>. Use a burner wallet with test ETH only.</p>
@@ -171,64 +186,65 @@
       }
     }
 
-    let provider, signer, token, userAddress;
+    let provider, signer, userAddress;
+    const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5";
+    const nftAddress = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
 
-    // Initialize token contract
-    const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5"; // WG_FakeToken address
     const tokenABI = [
-      "function approve(address spender, uint256 amount) public returns (bool)",
-      "function allowance(address owner, address spender) public view returns (uint256)",
-      "function balanceOf(address account) public view returns (uint256)",
-      "function transferFrom(address from, address to, uint256 amount) public returns (bool)",
-      "function faucet() external"
+      "function faucet() external",
+      "function balanceOf(address account) public view returns (uint256)"
+    ];
+    const nftABI = [
+      "function mint() external",
+      "function balanceOf(address account) public view returns (uint256)"
     ];
 
+    let token, nft;
+
     async function connectWallet() {
-      if (!window.ethereum) {
-        alert("Please install MetaMask.");
-        return;
-      }
+      if (!window.ethereum) return alert("Please install MetaMask.");
+
       try {
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
-        token = new ethers.Contract(tokenAddress, tokenABI, signer);
 
         const network = await provider.getNetwork();
-        if (network.chainId !== 11155111) {
-          document.getElementById("mintTokenBtn").disabled = true;
-          alert("Please switch to Sepolia testnet.");
-          return;
-        }
+        if (network.chainId !== 11155111) return alert("Please switch to Sepolia testnet.");
+
+        token = new ethers.Contract(tokenAddress, tokenABI, signer);
+        nft = new ethers.Contract(nftAddress, nftABI, signer);
 
         document.getElementById("mintTokenBtn").disabled = false;
-        console.log("Connected:", userAddress);
+        document.getElementById("mintNftBtn").disabled = false;
       } catch (err) {
         console.error("Connection error:", err);
-        document.getElementById("mintTokenBtn").disabled = true;
       }
     }
 
     document.getElementById("mintTokenBtn").onclick = async () => {
-      if (!signer || !token) {
-        alert("Please connect your wallet first.");
-        return;
-      }
-
       try {
-        const tx = await token.faucet({ gasLimit: 100000 });
-        console.log("Mint tx hash:", tx.hash);
+        const tx = await token.faucet();
         await tx.wait();
         const balance = await token.balanceOf(userAddress);
-        alert(`Successfully minted tokens! New balance: ${ethers.utils.formatEther(balance)} WGFAKE`);
+        alert(`Minted WGFAKE. Balance: ${ethers.utils.formatEther(balance)}`);
       } catch (err) {
-        console.error("Mint error:", err);
-        alert(`Failed to mint tokens: ${err.reason || err.message || "Try again."}`);
+        console.error("Token mint failed:", err);
       }
     };
 
-    // Connect wallet when page loads or MetaMask changes
+    document.getElementById("mintNftBtn").onclick = async () => {
+      try {
+        const tx = await nft.mint();
+        await tx.wait();
+        const count = await nft.balanceOf(userAddress);
+        alert(`Minted WarGame NFT! You now own ${count} NFT(s).`);
+      } catch (err) {
+        console.error("NFT mint failed:", err);
+      }
+    };
+
     window.onload = () => {
       if (window.ethereum) {
         connectWallet();
