@@ -318,8 +318,8 @@
         } else {
           status.textContent += `\nBalance: ${ethers.utils.formatEther(balance)} WGFAKE`;
           //Enable the Buttons
-          document.getElementById('claimTokenBtn').disabled = true;
-          document.getElementById('claimStepBtn').disabled = false;
+          document.getElementById('claimTokenBtn').disabled = false;
+          document.getElementById('claimStepBtn').disabled = true;
           document.getElementById('approveStepBtn').disabled = false;
           document.getElementById('transferStepBtn').disabled = false;
           document.getElementById('revokeStepBtn').disabled = false;
