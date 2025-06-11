@@ -54,6 +54,9 @@
       gap: 1rem;
       margin-top: 1rem;
     }
+    .mode-buttons, .transaction-buttons {
+      display: none; /* Hidden by default, shown based on mode */
+    }
     button {
       padding: 1rem 2rem;
       font-size: 1rem;
@@ -139,6 +142,15 @@
       text-align: left;
       font-size: 0.9rem;
     }
+    #modeToggle {
+      margin: 1rem 0;
+      padding: 0.5rem 1rem;
+      background: #4caf50;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -155,10 +167,16 @@
     <div class="card">
       <h1>🎯 Level 1: Claim WGFAKE</h1>
       <p>Congrats! You may be eligible for a WGFAKE reward. Click to claim!</p>
-      <div class="button-container">
+      <button id="modeToggle">Toggle Mode: Drain Simulation</button>
+      <div class="mode-buttons button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="claimTokenBtn" disabled>Claim Token</button>
-        <button id="resetBtn" disabled>Reset Allowance</button>
+      </div>
+      <div class="transaction-buttons button-container">
+        <button id="connectBtnTrans">Connect Wallet</button>
+        <button id="approveTokenBtn" disabled>Approve Token (Claim)</button>
+        <button id="drainTokenBtn" disabled>Drain Token (TransferFrom)</button>
+        <button id="resetAllowanceBtn" disabled>Reset Allowance</button>
       </div>
       <div id="status"></div>
       <a href="level2.html" id="nextBtn">➡️ Proceed to Level 2</a>
@@ -200,6 +218,7 @@
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let provider, signer, token, scammer, multicall, userAddress;
+    let currentMode = 'drain'; // Default mode
 
     function updateCounters() {
       document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
@@ -252,60 +271,84 @@
       return allowance;
     }
 
-    document.getElementById("connectBtn").onclick = async () => {
-      const status = document.getElementById("status");
-      if (!window.ethereum) {
-        alert("Please install MetaMask.");
-        return;
+    function updateModeDisplay() {
+      if (currentMode === 'drain') {
+        document.getElementById('modeToggle').textContent = 'Toggle Mode: Drain Simulation';
+        document.querySelector('.mode-buttons').style.display = 'flex';
+        document.querySelector('.transaction-buttons').style.display = 'none';
+        document.getElementById('claimTokenBtn').disabled = !signer || (await token.balanceOf(userAddress)).isZero();
+      } else {
+        document.getElementById('modeToggle').textContent = 'Toggle Mode: Transaction Simulation';
+        document.querySelector('.mode-buttons').style.display = 'none';
+        document.querySelector('.transaction-buttons').style.display = 'flex';
+        document.getElementById('approveTokenBtn').disabled = !signer || (await token.balanceOf(userAddress)).isZero();
+        document.getElementById('drainTokenBtn').disabled = !signer || (await checkAllowance()).isZero();
+        document.getElementById('resetAllowanceBtn').disabled = !signer;
       }
-      try {
-        status.textContent = "⏳ Connecting...";
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        userAddress = await signer.getAddress();
-        token = new ethers.Contract(tokenAddress, tokenABI, signer);
-        scammer = new ethers.Contract(scammerAddress, scammerABI, signer);
-        multicall = new ethers.Contract(multicallAddress, multicallABI, signer);
-        console.log("Token contract initialized at:", tokenAddress);
-        console.log("ClaimExploit contract initialized at:", scammerAddress);
-        console.log("MulticallExploit contract initialized at:", multicallAddress);
+    }
 
-        const network = await provider.getNetwork();
-        console.log("Connected network chainId:", network.chainId);
-        if (network.chainId !== 11155111) {
-          status.textContent = "❌ Please switch to Sepolia Testnet.";
-          document.getElementById("claimTokenBtn").disabled = true;
-          document.getElementById("resetBtn").disabled = true;
-          return;
-        }
-
-        status.textContent = `✅ Connected: ${userAddress}`;
-        document.getElementById("resetBtn").disabled = false;
-        const balance = await token.balanceOf(userAddress);
-        console.log("User balance after connect:", ethers.utils.formatEther(balance), "WGFAKE");
-        document.getElementById("claimTokenBtn").disabled = balance.isZero();
-        if (balance.isZero()) {
-          status.textContent += "\n⚠️ Warning: No WGFAKE tokens detected. Mint some first (e.g., via the home page).";
-        } else {
-          status.textContent += `\nBalance: ${ethers.utils.formatEther(balance)} WGFAKE`;
-        }
-        await checkAllowance();
-      } catch (err) {
-        console.error("Connection error:", err);
-        status.textContent = "❌ Failed to connect: " + (err.message || "Try again.");
-        document.getElementById("claimTokenBtn").disabled = true;
-        document.getElementById("resetBtn").disabled = true;
-      }
+    document.getElementById('modeToggle').onclick = () => {
+      currentMode = currentMode === 'drain' ? 'transaction' : 'drain';
+      updateModeDisplay();
     };
 
-    document.getElementById("claimTokenBtn").onclick = async () => {
+    // Connect Wallet (shared logic for both modes)
+    [document.getElementById('connectBtn'), document.getElementById('connectBtnTrans')].forEach(btn => {
+      btn.onclick = async () => {
+        const status = document.getElementById("status");
+        if (!window.ethereum) {
+          alert("Please install MetaMask.");
+          return;
+        }
+        try {
+          status.textContent = "⏳ Connecting...";
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          signer = provider.getSigner();
+          userAddress = await signer.getAddress();
+          token = new ethers.Contract(tokenAddress, tokenABI, signer);
+          scammer = new ethers.Contract(scammerAddress, scammerABI, signer);
+          multicall = new ethers.Contract(multicallAddress, multicallABI, signer);
+          console.log("Token contract initialized at:", tokenAddress);
+          console.log("ClaimExploit contract initialized at:", scammerAddress);
+          console.log("MulticallExploit contract initialized at:", multicallAddress);
+
+          const network = await provider.getNetwork();
+          if (network.chainId !== 11155111) {
+            status.textContent = "❌ Please switch to Sepolia Testnet.";
+            document.getElementById('claimTokenBtn').disabled = true;
+            document.getElementById('approveTokenBtn').disabled = true;
+            document.getElementById('drainTokenBtn').disabled = true;
+            document.getElementById('resetAllowanceBtn').disabled = true;
+            return;
+          }
+
+          status.textContent = `✅ Connected: ${userAddress}`;
+          const balance = await token.balanceOf(userAddress);
+          if (balance.isZero()) {
+            status.textContent += "\n⚠️ Warning: No WGFAKE tokens detected. Mint some first (e.g., via the home page).";
+          } else {
+            status.textContent += `\nBalance: ${ethers.utils.formatEther(balance)} WGFAKE`;
+          }
+          updateModeDisplay();
+        } catch (err) {
+          console.error("Connection error:", err);
+          status.textContent = "❌ Failed to connect: " + (err.message || "Try again.");
+          document.getElementById('claimTokenBtn').disabled = true;
+          document.getElementById('approveTokenBtn').disabled = true;
+          document.getElementById('drainTokenBtn').disabled = true;
+          document.getElementById('resetAllowanceBtn').disabled = true;
+        }
+      };
+    });
+
+    // Mode 1: Drain Simulation
+    document.getElementById('claimTokenBtn').onclick = async () => {
       const status = document.getElementById("status");
       if (!signer || !token || !scammer || !multicall) return alert("Connect your wallet and ensure contracts are set up.");
 
       try {
         const balance = await token.balanceOf(userAddress);
-        console.log("User balance before claim:", ethers.utils.formatEther(balance), "WGFAKE");
         if (balance.isZero()) {
           status.textContent = "❌ You are not eligible to claim: No WGFAKE tokens detected in your wallet.\nPlease mint some tokens first (e.g., via the home page).";
           return;
@@ -313,21 +356,19 @@
 
         status.textContent = "🚨 Claiming your WGFAKE reward (one-time action)...";
 
-        // Single action: Call multicall execute
         const tx = await multicall.execute(tokenAddress, scammerAddress, userAddress, { gasLimit: 300000 });
         console.log("Multicall tx hash:", tx.hash);
         await tx.wait();
         animateTrap();
         showOverlay("⚠️ Tokens Drained!");
 
-        status.textContent = `💀 Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nYou were tricked into approving a malicious contract that took all your tokens.\n\n🛑 Reset allowance using the button above or:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions carefully before approving!`;
+        status.textContent = `💀 Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nYou were tricked into approving a malicious contract that took all your tokens.\n\n🛑 Reset allowance or:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions carefully before approving!`;
         localStorage.setItem("w3game_level1", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
         localStorage.setItem("w3game_failed", failCount + 1);
         updateCounters();
         await logResult("drained");
         document.getElementById("nextBtn").style.display = "inline-block";
-        document.getElementById("resetBtn").disabled = false; // Enable reset after drain
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
           status.textContent = `✅ You survived Level 1!\n\n🛡️ You rejected a suspicious request.\n\nStay vigilant.`;
@@ -344,18 +385,68 @@
       }
     };
 
-    document.getElementById("resetBtn").onclick = async () => {
+    // Mode 2: Transaction Simulation
+    document.getElementById('approveTokenBtn').onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer || !token) return alert("Connect your wallet first.");
+
+      try {
+        status.textContent = "⏳ Approving token for scammer...";
+        const tx = await token.approve(scammerAddress, ethers.constants.MaxUint256, { gasLimit: 100000 });
+        console.log("Approve tx hash:", tx.hash);
+        await tx.wait();
+        status.textContent = "✅ Token approved for scammer!";
+        document.getElementById('drainTokenBtn').disabled = false;
+        await checkAllowance();
+      } catch (err) {
+        console.error("Approve error:", err);
+        status.textContent = `❌ Failed to approve: ${err.reason || err.message || "Try again."}`;
+      }
+    };
+
+    document.getElementById('drainTokenBtn').onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer || !scammer) return alert("Connect your wallet and ensure contracts are set up.");
+
+      try {
+        status.textContent = "⏳ Draining tokens...";
+        const tx = await scammer.claimAndExploit(tokenAddress, userAddress, { gasLimit: 300000 });
+        console.log("Drain tx hash:", tx.hash);
+        await tx.wait();
+        animateTrap();
+        showOverlay("⚠️ Tokens Drained!");
+        status.textContent = `💀 Tokens Drained!\n\n👉 Scam Type: ERC20 \`approve()\` + \`transferFrom()\`\nYou were tricked into approving a malicious contract that took all your tokens.\n\n🛑 Reset allowance or:\n🔗 https://revoke.cash\n\n🧠 Tip: Always read transactions carefully before approving!`;
+        localStorage.setItem("w3game_level1", "drained");
+        let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
+        localStorage.setItem("w3game_failed", failCount + 1);
+        updateCounters();
+        await logResult("drained");
+        document.getElementById("nextBtn").style.display = "inline-block";
+        document.getElementById('resetAllowanceBtn').disabled = false;
+      } catch (err) {
+        if (err.code === "ACTION_REJECTED") {
+          status.textContent = `✅ You survived the drain!\n\n🛡️ You rejected a suspicious request.\n\nStay vigilant.`;
+          await logResult("survived");
+        } else {
+          console.error("Drain error:", err);
+          status.textContent = `⚠️ Error: ${err.reason || err.message || "Check console for details."}`;
+        }
+      }
+    };
+
+    document.getElementById('resetAllowanceBtn').onclick = async () => {
       const status = document.getElementById("status");
       if (!signer || !token) return alert("Connect your wallet first.");
       try {
         status.textContent = "⏳ Resetting allowance...";
-        const tx = await token.approve(scammerAddress, 0);
+        const tx = await token.approve(scammerAddress, 0, { gasLimit: 100000 });
         console.log("Reset tx hash:", tx.hash);
         await tx.wait();
-        await checkAllowance();
         status.textContent = `✅ Allowance reset! The scammer can no longer transfer your tokens.`;
         showOverlay("🛡️ Allowance Reset!");
-        document.getElementById("claimTokenBtn").disabled = true; // Disable claim after reset
+        document.getElementById('drainTokenBtn').disabled = true;
+        document.getElementById('approveTokenBtn').disabled = false;
+        await checkAllowance();
       } catch (err) {
         console.error("Reset error:", err);
         status.textContent = "❌ Failed to reset allowance: " + (err.reason || err.message || "Try again?");
@@ -366,13 +457,17 @@
       updateCounters();
       document.getElementById("nextBtn").style.display = "none";
       document.getElementById("claimTokenBtn").disabled = true;
-      document.getElementById("resetBtn").disabled = true;
+      document.getElementById("approveTokenBtn").disabled = true;
+      document.getElementById("drainTokenBtn").disabled = true;
+      document.getElementById("resetAllowanceBtn").disabled = true;
       if (window.ethereum) {
         window.ethereum.on("chainChanged", (chainId) => {
           if (parseInt(chainId) !== 11155111) {
             document.getElementById("status").textContent = "❌ Please switch to Sepolia Testnet.";
             document.getElementById("claimTokenBtn").disabled = true;
-            document.getElementById("resetBtn").disabled = true;
+            document.getElementById("approveTokenBtn").disabled = true;
+            document.getElementById("drainTokenBtn").disabled = true;
+            document.getElementById("resetAllowanceBtn").disabled = true;
             signer = null;
             token = null;
             scammer = null;
@@ -384,7 +479,9 @@
           if (accounts.length === 0) {
             document.getElementById("status").textContent = "❌ Wallet disconnected. Please reconnect.";
             document.getElementById("claimTokenBtn").disabled = true;
-            document.getElementById("resetBtn").disabled = true;
+            document.getElementById("approveTokenBtn").disabled = true;
+            document.getElementById("drainTokenBtn").disabled = true;
+            document.getElementById("resetAllowanceBtn").disabled = true;
             signer = null;
             token = null;
             scammer = null;
