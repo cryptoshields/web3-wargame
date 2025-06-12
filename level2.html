@@ -142,27 +142,53 @@
       const status = document.getElementById("status");
       status.innerText = "⏳ Connecting...";
       try {
-        if (!window.ethereum) return alert("MetaMask not detected.");
+        if (!window.ethereum) {
+          status.innerText = "❌ MetaMask not detected. Please install or enable MetaMask.";
+          return;
+        }
         provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
+        try {
+          await provider.send("eth_requestAccounts", []);
+        } catch (err) {
+          status.innerText = "❌ Connection rejected. Please approve the connection in MetaMask.";
+          console.error("Connection error:", err);
+          return;
+        }
         signer = provider.getSigner();
         const network = await provider.getNetwork();
         if (network.chainId !== 11155111) {
-          status.innerText = "❌ Please switch to Sepolia Testnet.";
-          return;
+          try {
+            await window.ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: "0xaa36a7" }], // Sepolia chain ID
+            });
+          } catch (switchError) {
+            if (switchError.code === 4902) {
+              status.innerText = "❌ Sepolia Testnet not found. Please add it to MetaMask.";
+            } else {
+              status.innerText = "❌ Failed to switch to Sepolia Testnet.";
+            }
+            console.error("Network switch error:", switchError);
+            return;
+          }
         }
         const user = await signer.getAddress();
         let summary = `✅ Connected: ${user}\n\n`;
         for (const address of nftContracts) {
-          const contract = new ethers.Contract(address, nftABI, signer);
-          const name = await contract.name();
-          const balance = await contract.balanceOf(user);
-          summary += `🖼️ ${name}: ${balance} NFT(s)\n`;
+          try {
+            const contract = new ethers.Contract(address, nftABI, signer);
+            const name = await contract.name();
+            const balance = await contract.balanceOf(user);
+            summary += `🖼️ ${name}: ${balance} NFT(s)\n`;
+          } catch (err) {
+            console.warn(`Failed to query NFT contract ${address}:`, err);
+            summary += `🖼️ ${address}: Error fetching data\n`;
+          }
         }
         status.innerText = summary;
       } catch (err) {
-        console.error(err);
-        status.innerText = "❌ Wallet connection failed.";
+        console.error("Unexpected connection error:", err);
+        status.innerText = "❌ Wallet connection failed: " + err.message;
       }
     };
 
@@ -189,12 +215,12 @@
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
           const balance = await contract.balanceOf(user);
           let ids = [];
-          for (let i = 0; j < balance; j++) {
+          for (let i = 0; i < balance; i++) {
             try {
-              const tokenId = await contract.tokenOfOwnerByIndex(user, j);
+              const tokenId = await contract.tokenOfOwnerByIndex(user, i);
               ids.push(Number(tokenId));
             } catch (e) {
-              console.warn(`Failed to fetch token ID for ${contractAddr} at index ${j}:`, e);
+              console.warn(`Failed to fetch token ID for ${contractAddr} at index ${i}:`, e);
             }
           }
           tokenIdMatrix.push(ids);
@@ -220,13 +246,13 @@
             "✅ You survived Level 2!\n\n" +
             "🛡️ You rejected a malicious approval or drain transaction. " +
             "Always verify contracts before approving!";
-          let surviveCount = parseInt(localStorage.getItem("w3game_survived")) || 0;
+          let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
           updateCounters();
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
-          console.error(err);
-          status.innerText = "⚠️ Unexpected error occurred: " + err.message);
+          console.error("Drain error:", err);
+          status.innerText = "⚠️ Unexpected error occurred: " + err.message;
         }
       }
     };
