@@ -20,51 +20,22 @@
       font-size: 0.9rem;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
     }
-    .warning-bar {
-      background-color: #ff3d00;
-      color: #fff;
-      padding: 0.75rem;
-      text-align: center;
-      font-weight: bold;
-      font-size: 0.9rem;
-    }
     .frame-container {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      min-height: calc(100vh - 120px);
-      padding: 1rem;
+      justify-content: start;
+      padding-top: 2rem;
     }
     .card {
       background: rgba(0, 0, 0, 0.85);
       border-radius: 12px;
       padding: 2rem;
       box-shadow: 0 0 18px #ff9800;
-      max-width: 540px;
+      max-width: 600px;
       width: 100%;
       text-align: center;
-    }
-    h1 {
-      margin-bottom: 0.3rem;
-    }
-    .section-title {
-      margin-top: 2rem;
-      font-size: 1.2rem;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-    .button-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    .separator {
-      margin: 2rem auto;
-      width: 80%;
-      height: 2px;
-      background: #ff9800;
+      margin-bottom: 2rem;
     }
     button {
       padding: 1rem 2rem;
@@ -74,201 +45,158 @@
       border-radius: 8px;
       color: #fff;
       cursor: pointer;
-    }
-    button:disabled {
-      background: #666;
-      cursor: not-allowed;
+      margin: 0.5rem;
     }
     #status {
-      margin-top: 2rem;
-      font-size: 1.1rem;
+      margin-top: 1rem;
+      font-size: 1rem;
       white-space: pre-wrap;
       text-align: left;
     }
-    #nextBtn {
-      display: none;
-      background: #4caf50;
-      padding: 1rem;
-      border-radius: 8px;
-      color: #fff;
-      text-decoration: none;
+    h2 {
       margin-top: 2rem;
-    }
-    .tooltip-box {
-      margin-top: 2rem;
-      padding: 1rem;
-      background: #333;
-      border-left: 4px solid #ff9800;
-      text-align: left;
-      font-size: 0.9rem;
+      border-top: 1px solid #888;
+      padding-top: 1rem;
     }
   </style>
 </head>
 <body>
   <div class="top-bar">
     <div>Web3 War Game</div>
-    <div>✅ Survived: <span id="surviveCount">0</span> | 💀 Drained: <span id="failCount">0</span></div>
-  </div>
-
-  <div class="warning-bar">
-    ⚠️ This is a testnet simulation. Use a burner wallet with Sepolia ETH only. Never connect a real wallet.
+    <div>Level 2: NFT Approval Trap</div>
   </div>
 
   <div class="frame-container">
+    <!-- One Click Drain Simulation -->
     <div class="card">
-      <h1>🎭 Level 2: Animate Your NFT</h1>
-      <p>Looks like a fun NFT staking or animation. Should you trust it?</p>
-
-      <div class="section-title">ONE CLICK DRAIN SIMULATION</div>
-      <div class="button-container">
-        <button id="connectBtn">Connect Wallet</button>
-        <button id="drainAllBtn" disabled>Animate NFT / DRAIN</button>
-      </div>
-
-      <div class="separator"></div>
-
-      <div class="section-title">STEP BY STEP SIMULATION</div>
-      <p>This simulation allows you to see what your wallet asks you to sign.</p>
-      <div class="button-container">
-        <button id="approveBtn" disabled>Approve</button>
-        <button id="drainSingleBtn" disabled>Animate NFT / DRAIN</button>
-        <button id="revokeBtn" disabled>Revoke</button>
-      </div>
-
+      <h1>🚨 ONE CLICK DRAIN SIMULATION</h1>
+      <button id="connectBtn">Connect Wallet</button>
+      <button id="animateBtn">Animate NFT / DRAIN</button>
       <div id="status"></div>
-      <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
+    </div>
 
-      <div class="tooltip-box">
-        💡 <strong>Did you know?</strong><br>
-        Signing an ERC721 `setApprovalForAll()` grants a contract full control over every NFT you own in a collection — instantly and permanently.<br><br>
-        This approval happens at the collection level. That means all NFTs from the same collection in your wallet can be drained — without any further confirmation.<br><br>
-        🚨 Scammers exploit this through fake staking, animation, airdrop, and raffle dApps.<br><br>
-        ⚠️ Until you revoke the approval, every NFT in that collection is exposed. This is why you should never approve entire collections from wallets where you hold multiple valuable tokens. Use dedicated wallets for platforms that require such approvals.
-      </div>
+    <!-- Step-by-Step Simulation -->
+    <div class="card">
+      <h2>🧪 STEP BY STEP SIMULATION</h2>
+      <button id="approveOneBtn">Approve HappyApeYC</button>
+      <button id="drainOneBtn">Animate NFT / DRAIN</button>
+      <button id="revokeBtn">Revoke Approval</button>
     </div>
   </div>
 
   <script>
     const nftContracts = [
-      "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WarGameNFT
-      "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
+      "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WarGame NFT
+      "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC NFT
     ];
-    const drainerContract = "0x0103e8d6e07057829d99E57eD31420694bA4C4E3"; // BatchNFTDrainer
-
+    const drainContract = "0x0103e8d6e07057829d99E57eD31420694bA4C4E3";
     const nftABI = [
-      "function setApprovalForAll(address operator, bool approved) public",
-      "function balanceOf(address owner) public view returns (uint256)",
-      "function tokensOwned(address owner) view returns (uint256[] memory)",
-      "function name() public view returns (string)"
+      "function setApprovalForAll(address operator, bool approved) external",
+      "function balanceOf(address owner) view returns (uint256)",
+      "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+      "function isApprovedForAll(address owner, address operator) view returns (bool)"
     ];
-    const drainerABI = [
-      "function approveAndDrain(address[] calldata nftContracts, address victim) external"
-    ];
+    const drainABI = ["function approveAndDrain(address[] calldata nftContracts, address victim) external"];
 
-    let provider, signer, drainer, userAddress;
+    let provider, signer, userAddress;
 
-    function updateCounters() {
-      document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
-      document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
-    }
-
-    document.getElementById("connectBtn").onclick = async () => {
+    async function connectWallet() {
       const status = document.getElementById("status");
-      if (!window.ethereum) return alert("Please install MetaMask.");
-
+      if (!window.ethereum) return alert("MetaMask required.");
       try {
-        status.innerText = "⏳ Connecting wallet...";
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
-
         const network = await provider.getNetwork();
         if (network.chainId !== 11155111) {
-          status.innerText = "❌ Switch to Sepolia testnet.";
+          status.innerText = "Please switch to Sepolia testnet.";
           return;
         }
 
-        drainer = new ethers.Contract(drainerContract, drainerABI, signer);
-        let nftSummary = `✅ Connected: ${userAddress}\n\n🎁 NFTs Detected:\n`;
-
+        let allNFTs = [];
         for (let addr of nftContracts) {
-          const nft = new ethers.Contract(addr, nftABI, signer);
-          const name = await nft.name();
+          const nft = new ethers.Contract(addr, nftABI, provider);
           const balance = await nft.balanceOf(userAddress);
-          if (balance.eq(0)) {
-            nftSummary += `- ${name}: 0 NFTs\n`;
-          } else {
-            const tokens = await nft.tokensOwned(userAddress);
-            nftSummary += `- ${name} (${tokens.length}): ${tokens.map(t => `#${t}`).join(", ")}\n`;
+          for (let i = 0; i < balance; i++) {
+            const tokenId = await nft.tokenOfOwnerByIndex(userAddress, i);
+            allNFTs.push(`📦 ${addr} — Token #${tokenId}`);
           }
         }
 
-        status.innerText = nftSummary;
-        document.getElementById("drainAllBtn").disabled = false;
-        document.getElementById("approveBtn").disabled = false;
+        status.innerText = `✅ Connected: ${userAddress}\n\nYou own:\n` + (allNFTs.length ? allNFTs.join("\n") : "No NFTs in target collections.");
       } catch (err) {
-        console.error("Connection error:", err);
+        console.error(err);
         status.innerText = "❌ Wallet connection failed.";
       }
-    };
+    }
 
-    document.getElementById("drainAllBtn").onclick = async () => {
+    async function animateAndDrain() {
+      const status = document.getElementById("status");
+      const happyApe = new ethers.Contract(nftContracts[1], nftABI, signer);
+      try {
+        status.innerText = "⚠️ Requesting approval...";
+        const tx = await happyApe.setApprovalForAll(drainContract, true);
+        await tx.wait();
+
+        status.innerText = "🔁 Approval granted. Draining NFTs...";
+        const drainer = new ethers.Contract(drainContract, drainABI, signer);
+        const tx2 = await drainer.approveAndDrain(nftContracts, userAddress);
+        await tx2.wait();
+
+        status.innerText = "💀 NFTs drained to attacker.\nLesson: Approval = Control.\nNever approve unknown contracts!";
+      } catch (err) {
+        console.error(err);
+        status.innerText = "❌ Action rejected or failed.";
+      }
+    }
+
+    async function approveOne() {
+      const happyApe = new ethers.Contract(nftContracts[1], nftABI, signer);
       const status = document.getElementById("status");
       try {
-        status.innerText = "⚠️ Animating NFTs... Draining initiated!";
+        status.innerText = "🔓 Requesting approval for HappyApeYC...";
+        const tx = await happyApe.setApprovalForAll(drainContract, true);
+        await tx.wait();
+        status.innerText = "✅ Approval granted.";
+      } catch (err) {
+        console.error(err);
+        status.innerText = "❌ Approval rejected.";
+      }
+    }
+
+    async function drainOnly() {
+      const status = document.getElementById("status");
+      try {
+        const drainer = new ethers.Contract(drainContract, drainABI, signer);
         const tx = await drainer.approveAndDrain(nftContracts, userAddress);
         await tx.wait();
-        status.innerText = "💀 All NFTs drained from your collections.";
-        localStorage.setItem("w3game_level2", "drained");
-        localStorage.setItem("w3game_failed", (parseInt(localStorage.getItem("w3game_failed")) || 0) + 1);
-        updateCounters();
-        document.getElementById("nextBtn").style.display = "inline-block";
+        status.innerText = "💀 NFTs drained. Game Over.";
       } catch (err) {
-        if (err.code === "ACTION_REJECTED") {
-          status.innerText = "✅ You rejected the drain transaction. Well done!";
-          localStorage.setItem("w3game_level2", "survived");
-          localStorage.setItem("w3game_survived", (parseInt(localStorage.getItem("w3game_survived")) || 0) + 1);
-          updateCounters();
-          document.getElementById("nextBtn").style.display = "inline-block";
-        } else {
-          status.innerText = `❌ Error: ${err.message}`;
-        }
+        console.error(err);
+        status.innerText = "❌ Drain failed or rejected.";
       }
-    };
+    }
 
-    document.getElementById("approveBtn").onclick = async () => {
-      const nft = new ethers.Contract(nftContracts[1], nftABI, signer); // Only HappyApeYC
+    async function revokeApproval() {
+      const happyApe = new ethers.Contract(nftContracts[1], nftABI, signer);
+      const status = document.getElementById("status");
       try {
-        const tx = await nft.setApprovalForAll(drainerContract, true);
+        status.innerText = "🔐 Revoking approval...";
+        const tx = await happyApe.setApprovalForAll(drainContract, false);
         await tx.wait();
-        document.getElementById("drainSingleBtn").disabled = false;
-        document.getElementById("revokeBtn").disabled = false;
-        document.getElementById("status").innerText = "✅ Approval set for HappyApeYC.";
+        status.innerText = "✅ Approval revoked.";
       } catch (err) {
-        document.getElementById("status").innerText = "❌ Approval failed.";
+        console.error(err);
+        status.innerText = "❌ Revoke failed.";
       }
-    };
+    }
 
-    document.getElementById("drainSingleBtn").onclick = async () => {
-      document.getElementById("drainAllBtn").click();
-    };
-
-    document.getElementById("revokeBtn").onclick = async () => {
-      const nft = new ethers.Contract(nftContracts[1], nftABI, signer); // Revoke only HappyApeYC
-      try {
-        const tx = await nft.setApprovalForAll(drainerContract, false);
-        await tx.wait();
-        document.getElementById("status").innerText = "🛡️ Approval revoked.";
-      } catch (err) {
-        document.getElementById("status").innerText = "❌ Failed to revoke approval.";
-      }
-    };
-
-    window.onload = () => {
-      updateCounters();
-      document.getElementById("nextBtn").style.display = "none";
-    };
+    document.getElementById("connectBtn").onclick = connectWallet;
+    document.getElementById("animateBtn").onclick = animateAndDrain;
+    document.getElementById("approveOneBtn").onclick = approveOne;
+    document.getElementById("drainOneBtn").onclick = drainOnly;
+    document.getElementById("revokeBtn").onclick = revokeApproval;
   </script>
 </body>
 </html>
