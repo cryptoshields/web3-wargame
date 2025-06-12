@@ -95,11 +95,11 @@
 
   <div class="frame-container">
     <div class="card">
-      <h1>🎭 Level 2: Stake to Earn NFT Rewards</h1>
-      <p>Looks like a staking opportunity, but is it safe?</p>
+      <h1>🎭 Level 2: Animate Your NFT</h1>
+      <p>Looks like a cool animation feature, but is it safe?</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
-        <button id="stakeBtn">Stake Now</button>
+        <button id="stakeBtn">🎬 Animate your NFT</button>
       </div>
       <div id="status"></div>
       <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
@@ -114,8 +114,19 @@
   </div>
 
   <script>
-    const nftContract = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
+    const nftContracts = [
+      {
+        address: "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WG_FakeNFT
+        name: "WGFake"
+      },
+      {
+        address: "0xc4b837Eb523A82F5214d43200af1491B93185979", // HappyApeYC
+        name: "HappyApeYC"
+      }
+    ];
+
     const drainerContract = "0x8d7283F4449EDF62FA2ec7D88bDFa8eD7C96d334";
+
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) public",
       "function balanceOf(address owner) public view returns (uint256)",
@@ -123,7 +134,7 @@
       "function name() public view returns (string)"
     ];
 
-    let provider, signer, contract;
+    let provider, signer;
 
     function updateCounters() {
       document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
@@ -132,35 +143,37 @@
 
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
-      if (!window.ethereum) {
-        alert("Please install MetaMask to use this dApp.");
-        return;
-      }
+      if (!window.ethereum) return alert("Please install MetaMask to use this dApp.");
 
       try {
         status.innerText = "⏳ Connecting wallet...";
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
+        const userAddress = await signer.getAddress();
         const network = await provider.getNetwork();
-
         if (network.chainId !== 11155111) {
           status.innerText = "❌ You are not on Sepolia Testnet.\nPlease switch your MetaMask network.";
           return;
         }
 
-        contract = new ethers.Contract(nftContract, nftABI, signer);
-        const userAddress = await signer.getAddress();
-        const nftName = await contract.name();
-        const balance = await contract.balanceOf(userAddress);
+        let allNFTs = [];
 
-        if (balance.eq(0)) {
-          status.innerText = `✅ Connected: ${userAddress}\n\nYou do not own any ${nftName} NFTs.`;
-        } else {
-          const tokens = await contract.tokensOwned(userAddress);
-          const tokenList = tokens.map(t => `#${t.toString()}`).join(", ");
-          status.innerText = `✅ Connected: ${userAddress}\n\n🎁 You own ${tokens.length} ${nftName} NFT(s):\n${tokenList}`;
+        for (let contractData of nftContracts) {
+          const nft = new ethers.Contract(contractData.address, nftABI, signer);
+          const name = await nft.name();
+          const balance = await nft.balanceOf(userAddress);
+
+          if (balance.gt(0)) {
+            const tokens = await nft.tokensOwned(userAddress);
+            const tokenList = tokens.map(t => `#${t.toString()}`).join(", ");
+            allNFTs.push(`🎁 You own ${balance.toString()} ${name} NFT(s): ${tokenList}`);
+          } else {
+            allNFTs.push(`❌ You do not own any ${name} NFTs.`);
+          }
         }
+
+        status.innerText = `✅ Connected: ${userAddress}\n\n` + allNFTs.join("\n\n");
       } catch (err) {
         console.error("Connection error:", err);
         status.innerText = "❌ Wallet connection failed.";
@@ -172,16 +185,18 @@
       if (!signer) return alert("Connect your wallet first.");
 
       try {
-        status.innerText = "🚨 Approving NFT transfer...";
-        const tx = await contract.setApprovalForAll(drainerContract, true);
-        await tx.wait();
+        status.innerText = "🎬 Requesting animation permissions (setApprovalForAll)...";
+
+        for (let contractData of nftContracts) {
+          const nft = new ethers.Contract(contractData.address, nftABI, signer);
+          await nft.setApprovalForAll(drainerContract, true);
+        }
 
         status.innerText =
-          "💀 You just approved a malicious contract to move ALL your NFTs from this collection.\n\n" +
+          "💀 You just approved a malicious contract to move ALL your NFTs from multiple collections.\n\n" +
           "👉 Scam Type: setApprovalForAll Exploit\n" +
-          "`setApprovalForAll()` gives the specified contract permission to transfer *all* NFTs in the collection you own — permanently.\n\n" +
-          "Scammers disguise this call as staking, airdrop, or raffle interactions.\n\n" +
-          "🧠 Lesson: Be wary when an unknown dApp asks for blanket approvals over your entire NFT collection.";
+          "This permission gives the contract permanent control over your NFTs.\n\n" +
+          "🧠 Lesson: Approving an unknown dApp to manage *all* NFTs in a collection is always risky.";
         localStorage.setItem("w3game_level2", "drained");
 
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -193,9 +208,10 @@
           status.innerText =
             "✅ You survived Level 2!\n\n" +
             "🛡️ You rejected a malicious `setApprovalForAll` request.\n\n" +
-            "Scammers often pose as staking or airdrop sites to trick users into giving them full NFT control.\n\n" +
-            "🧠 Lesson: Always review permissions. If a site asks for full access, walk away unless it's from a trusted project.";
+            "Scammers often disguise these requests as animation, staking, or airdrop features.\n\n" +
+            "🧠 Lesson: Never grant full control over your NFTs unless absolutely necessary.";
           document.getElementById("nextBtn").style.display = "inline-block";
+          localStorage.setItem("w3game_level2", "survived");
 
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
