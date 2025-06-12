@@ -139,7 +139,7 @@
       <h3>You can mint the fake tokens for the purpose of this simulation</h3>
       <div class="mint-buttons">
         <button id="mintTokenBtn" disabled>Mint WGFAKE Token</button>
-        <button id="mintNftBtn" disabled>Mint Fake NFT</button>
+        <button id="mintNftBtn" disabled>Mint WarGameNFT</button>
         <button id="mintHappyApeYCBtn" disabled>Mint HappyApeYC NFT</button>
       </div>
 
@@ -189,8 +189,8 @@
 
     let provider, signer, userAddress;
     const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5";
-    const nftAddress = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
-    const happyApeYCAddress = "0xc4b837Eb523A82F5214d43200af1491B93185979";
+    const nftAddress = "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60"; // Updated to WarGameNFT
+    const happyApeYCAddress = "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"; // Updated to HappyApeYC
 
     const tokenABI = [
       "function faucet() external",
@@ -247,9 +247,9 @@
         const tx = await nft.mint();
         await tx.wait();
         const count = await nft.balanceOf(userAddress);
-        alert(`Minted Fake NFT! You now own ${count} NFT(s).`);
+        alert(`Minted WarGameNFT! You now own ${count} NFT(s).`);
       } catch (err) {
-        console.error("Fake NFT mint failed:", err);
+        console.error("WarGameNFT mint failed:", err);
       }
     };
 
