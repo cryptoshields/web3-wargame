@@ -138,8 +138,9 @@
       <hr style="margin: 2rem 0; border: 1px solid #333;" />
       <h3>You can mint the fake tokens for the purpose of this simulation</h3>
       <div class="mint-buttons">
-        <button id="mintTokenBtn" disabled>Mint Fake Token</button>
+        <button id="mintTokenBtn" disabled>Mint WGFAKE Token</button>
         <button id="mintNftBtn" disabled>Mint Fake NFT</button>
+        <button id="mintHappyApeYCBtn" disabled>Mint HappyApeYC NFT</button>
       </div>
 
       <!-- Game Levels -->
@@ -189,6 +190,7 @@
     let provider, signer, userAddress;
     const tokenAddress = "0x2ae3f821fdBad3Fe6A5A84111c4D19E0a2fb0Ed5";
     const nftAddress = "0x72Fb81C679Cb531fe2104be9d68a20f41fB0B604";
+    const happyApeYCAddress = "0xc4b837Eb523A82F5214d43200af1491B93185979";
 
     const tokenABI = [
       "function faucet() external",
@@ -198,8 +200,12 @@
       "function mint() external",
       "function balanceOf(address account) public view returns (uint256)"
     ];
+    const happyApeYCAbi = [
+      "function mint() external",
+      "function balanceOf(address account) public view returns (uint256)"
+    ];
 
-    let token, nft;
+    let token, nft, happyApeYC;
 
     async function connectWallet() {
       if (!window.ethereum) return alert("Please install MetaMask.");
@@ -215,9 +221,11 @@
 
         token = new ethers.Contract(tokenAddress, tokenABI, signer);
         nft = new ethers.Contract(nftAddress, nftABI, signer);
+        happyApeYC = new ethers.Contract(happyApeYCAddress, happyApeYCAbi, signer);
 
         document.getElementById("mintTokenBtn").disabled = false;
         document.getElementById("mintNftBtn").disabled = false;
+        document.getElementById("mintHappyApeYCBtn").disabled = false;
       } catch (err) {
         console.error("Connection error:", err);
       }
@@ -228,9 +236,9 @@
         const tx = await token.faucet();
         await tx.wait();
         const balance = await token.balanceOf(userAddress);
-        alert(`Minted WGFAKE. Balance: ${ethers.utils.formatEther(balance)}`);
+        alert(`Minted WGFAKE Token. Balance: ${ethers.utils.formatEther(balance)}`);
       } catch (err) {
-        console.error("Token mint failed:", err);
+        console.error("WGFAKE Token mint failed:", err);
       }
     };
 
@@ -239,9 +247,20 @@
         const tx = await nft.mint();
         await tx.wait();
         const count = await nft.balanceOf(userAddress);
-        alert(`Minted WarGame NFT! You now own ${count} NFT(s).`);
+        alert(`Minted Fake NFT! You now own ${count} NFT(s).`);
       } catch (err) {
-        console.error("NFT mint failed:", err);
+        console.error("Fake NFT mint failed:", err);
+      }
+    };
+
+    document.getElementById("mintHappyApeYCBtn").onclick = async () => {
+      try {
+        const tx = await happyApeYC.mint();
+        await tx.wait();
+        const count = await happyApeYC.balanceOf(userAddress);
+        alert(`Minted HappyApeYC NFT! You now own ${count} NFT(s).`);
+      } catch (err) {
+        console.error("HappyApeYC NFT mint failed:", err);
       }
     };
 
